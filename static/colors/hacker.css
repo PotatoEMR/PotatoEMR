@@ -1,0 +1,99 @@
+.color-primary, .color-primary-hover,
+.color-color1, .color-color1-hover,
+.color-color2, .color-color2-hover,
+.color-color3, .color-color3-hover {
+    background-color: black;
+    color: #39ff14;
+    border-color: white;
+}
+.color-primary.shadow, .color-primary-hover.shadow
+.color-color1.shadow, .color-color1-hover.shadow,
+.color-color2.shadow, .color-color2-hover.shadow,
+.color-color3.shadow, .color-color3-hover.shadow  {
+    box-shadow: white 5px 5px;
+}
+.color-color1-hover:hover,
+.color-color2-hover:hover,
+.color-color3-hover:hover,
+.color-primary-hover:hover  {
+    background-color: white;
+    color: black;
+}
+
+.color-success, .color-success-hover {
+    background-color: black;
+    color: #39ff14;
+    border-color: white;
+}
+.color-success.shadow, .color-success-hover.shadow {
+    box-shadow: white 5px 5px;
+}
+.color-success-hover:hover {
+    background-color: white;
+    color: black;
+}
+
+.color-danger, .color-danger-hover {
+    background-color: black;
+    color: #39ff14;
+    border-color: white;
+}
+.color-danger.shadow, .color-danger-hover.shadow {
+    box-shadow: white 5px 5px;
+}
+.color-danger-hover:hover {
+    background-color: white;
+    color: black;
+}
+
+.color-warning, .color-warning-hover {
+    background-color: black;
+    color: #39ff14;
+    border-color: white;
+}
+.color-warning.shadow, .color-warning-hover.shadow {
+    box-shadow: white 5px 5px;
+}
+.color-warning-hover:hover {
+    background-color: white;
+    color: black;
+}
+
+.color-info, .color-info-hover {
+    background-color: black;
+    color: #39ff14;
+    border-color: white;
+}
+.color-info.shadow, .color-info-hover.shadow {
+    box-shadow: white 5px 5px;
+}
+.color-info-hover:hover {
+    background-color: white;
+    color: black;
+}
+
+.color-light, .color-light-hover {
+    background-color: black;
+    color: #39ff14;
+    border-color: white;
+}
+.color-light.shadow, .color-light-hover.shadow {
+    box-shadow: white 5px 5px;
+}
+.color-light-hover:hover {
+    background-color: white;
+    color: black;
+}
+
+.color-dark, .color-dark-hover {
+    background-color: black;
+    color: #39ff14;
+    border-color: white;
+}
+.color-dark.shadow, .color-dark-hover.shadow {
+    box-shadow: white 5px 5px;
+}
+.color-dark-hover:hover {
+    background-color: white;
+    color: black;
+}

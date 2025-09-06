@@ -1,0 +1,119 @@
+.color-primary, .color-primary-hover {
+   background-color: #FF6B9D;
+   color: white;
+   border-color: rgb(0, 0, 0);
+}
+.color-primary.shadow, .color-primary-hover.shadow {
+   box-shadow: rgb(0, 0, 0) 5px 5px;
+}
+.color-primary-hover:hover {
+   background-color: #E5477A;
+}
+
+.color-color1, .color-color1-hover {
+   background-color: #A8E6CF;
+   color: black;
+   border-color: black;
+}
+.color-color1.shadow, .color-color1-hover.shadow {
+   box-shadow: black 5px 5px;
+}
+.color-color1-hover:hover {
+   background-color: #7FD19F;
+}
+
+.color-color2, .color-color2-hover {
+   background-color: #FDDDE6;
+   color: black;
+   border-color: black;
+}
+.color-color2.shadow, .color-color2-hover.shadow {
+   box-shadow: black 5px 5px;
+}
+.color-color2-hover:hover {
+   background-color: #F9B8C9;
+}
+
+.color-color3, .color-color3-hover {
+   background-color: #FFF399;
+   color: black;
+   border-color: black;
+}
+.color-color3.shadow, .color-color3-hover.shadow {
+   box-shadow: black 5px 5px;
+}
+.color-color3-hover:hover {
+   background-color: #FFED66;
+}
+
+.color-success, .color-success-hover {
+   background-color: #B8E6B8;
+   color: black;
+   border-color: white;
+}
+.color-success.shadow, .color-success-hover.shadow {
+   box-shadow: white 5px 5px;
+}
+.color-success-hover:hover {
+   background-color: #7FD17F;
+}
+
+.color-danger, .color-danger-hover {
+   background-color: #FFB3BA;
+   color: black;
+   border-color: white;
+}
+.color-danger.shadow, .color-danger-hover.shadow {
+   box-shadow: white 5px 5px;
+}
+.color-danger-hover:hover {
+   background-color: #FF8C94;
+}
+
+.color-warning, .color-warning-hover {
+   background-color: #FFDFBA;
+   color: black;
+   border-color: black;
+}
+.color-warning.shadow, .color-warning-hover.shadow {
+   box-shadow: black 5px 5px;
+}
+.color-warning-hover:hover {
+   background-color: #FFC78A;
+}
+
+.color-info, .color-info-hover {
+   background-color: #B3E5FC;
+   color: black;
+   border-color: black;
+}
+.color-info.shadow, .color-info-hover.shadow {
+   box-shadow: black 5px 5px;
+}
+.color-info-hover:hover {
+   background-color: #6FD4F7;
+}
+
+.color-light, .color-light-hover {
+   background-color: #F5F5F5;
+   color: black;
+   border-color: black;
+}
+.color-light.shadow, .color-light-hover.shadow {
+   box-shadow: black 5px 5px;
+}
+.color-light-hover:hover {
+   background-color: #D8D8D8;
+}
+
+.color-dark, .color-dark-hover {
+   background-color: #6B5B95;
+   color: white;
+   border-color: white;
+}
+.color-dark.shadow, .color-dark-hover.shadow {
+   box-shadow: white 5px 5px;
+}
+.color-dark-hover:hover {
+   background-color: #4A3D6B;
+}

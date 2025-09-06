@@ -1,0 +1,237 @@
+package pages_patient
+
+import (
+	"github.com/PotatoEMR/PotatoEMR/pages"
+	r4 "github.com/PotatoEMR/simple-fhir-client/r4"
+	r4Client "github.com/PotatoEMR/simple-fhir-client/r4Client"
+
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
+
+func Allergies(w http.ResponseWriter, req *http.Request) {
+	patId := req.PathValue("patId")
+	client := r4Client.New("r4.smarthealthit.org/")
+	patEverything, err := client.PatientEverythingGrouped(patId)
+
+	if err != nil {
+		pages.ErrorMsg(err).Render(req.Context(), w)
+	} else if len(patEverything.Patients) != 1 {
+		pages.ErrorMsg(fmt.Errorf("patient list should be len 1, is %d", len(patEverything.Patients))).Render(req.Context(), w)
+	} else {
+		pat := patEverything.Patients[0]
+		T_Allergies(pat, patEverything).Render(req.Context(), w)
+	}
+}
+
+func AllergiesCreate(w http.ResponseWriter, req *http.Request) {
+	fmt.Println("Create")
+	err := req.ParseForm()
+	if err != nil {
+		fmt.Println("error parsing form idk")
+		return
+	}
+
+	for key, values := range req.Form {
+		fmt.Println(key, values)
+	}
+	criticality := req.FormValue("criticality")
+	patId := req.PathValue("patId")
+	ref := "Patient/" + patId
+	allergy := r4.AllergyIntolerance{Criticality: &criticality, Patient: r4.Reference{Reference: &ref}}
+	client := r4Client.New("r4.smarthealthit.org/")
+	test, err := client.CreateAllergyIntolerance(&allergy)
+	fmt.Println(json.Marshal(test))
+	if err != nil {
+		fmt.Println("error creating allergy", err)
+	}
+
+	w.Header().Set("HX-Retarget", "body")
+	Allergies(w, req)
+}
+
+func AllergiesUpdate(w http.ResponseWriter, req *http.Request) {
+	allergyId := req.PathValue("allergyId")
+	client := r4Client.New("r4.smarthealthit.org/")
+	a, _ := client.ReadAllergyIntolerance(allergyId)
+	criticality := req.FormValue("criticality")
+	a.Criticality = &criticality
+	client.UpdateAllergyIntolerance(a)
+	w.Header().Set("HX-Retarget", "body")
+	Allergies(w, req)
+}
+
+func AllergiesDelete(w http.ResponseWriter, req *http.Request) {
+	allergyId := req.PathValue("allergyId")
+	client := r4Client.New("r4.smarthealthit.org/")
+	client.DeleteAllergyIntoleranceById(allergyId)
+	w.Header().Set("HX-Retarget", "body")
+	Allergies(w, req)
+}
+
+templ T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
+	@Base_Patient(pat, patEverything, TabAllergies) {
+		<div id="allergy-page" class="color-color3" style="margin: 4px; padding: 4px;">
+			{ children... }
+			<div style="display: flex; align-items: center; gap: 1em;">
+				<h3>Allergies</h3>
+				<dialog
+					potato-drag
+					class="color-color3 shadow"
+					style="position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; cursor: move; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
+				>
+					@T_AllergyForm(*pat.Id, nil)
+				</dialog>
+				<button onclick="this.previousElementSibling.show()">
+					Add New Allergy
+				</button>
+			</div>
+			<table>
+				<thead>
+					<th>Allergy</th>
+					<th>Date</th>
+					<th>Notes</th>
+					<th></th>
+				</thead>
+				<tbody>
+					for _, allergy := range patEverything.AllergyIntolerances {
+						<tr>
+							<td>{ allergy.Code.String() }</td>
+							<td>
+								if allergy.OnsetDateTime != nil {
+									*allergy.onsetDateTime
+								}
+							</td>
+							<td>
+								if len(allergy.Note) != 0 {
+									<div style="width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{ allergy.Note[0].Text }</div>
+								}
+							</td>
+							<td>
+								<dialog
+									potato-drag
+									class="color-color3 shadow"
+									style="position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; cursor: move; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
+								>
+									@T_AllergyForm(*pat.Id, allergy)
+								</dialog>
+								<button onclick="this.previousElementSibling.show()">
+									Edit
+								</button>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+templ T_AllergyForm(patId string, allergy *r4.AllergyIntolerance) {
+	<form
+		style="display: flex; flex-direction: column; height: 100%;"
+		if allergy == nil || allergy.Id == nil {
+			hx-post={ "/patient/" + patId + "/allergies/create/" }
+		} else {
+			hx-post={ "/patient/" + patId + "/allergies/update/" + *allergy.Id }
+		}
+		hx-push-url="false"
+		hx-swap="outerHTML"
+	>
+		<header style="display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;">
+			<span>
+				if allergy == nil {
+					Add New Allergy
+				} else {
+					Edit { allergy.Code.String() }
+				}
+			</span>
+			<button type="button" onclick="this.closest('dialog').close()">✕</button>
+		</header>
+		<div>
+			<hr class="color-color3"/>
+		</div>
+		<section style="overflow: auto; display:flex; flex-direction:column; flex: 1">
+			<label>
+				Clinical Status:
+				@allergy.T_ClinicalStatus()
+			</label>
+			<label>
+				Verification Status:
+				@allergy.T_VerificationStatus()
+			</label>
+			// <label>
+			// 	Allergy:
+			// 	<input name="code.coding[0].display" value={ *allergy.Code.Coding[0].Display }/>
+			// </label>
+			// <label>
+			// 	Reactions:
+			// 	<input name="reaction[0].manifestation[0].coding[0].display" value={ *allergy.Reaction[0].Manifestation[0].Coding[0].Display }/>
+			// </label>
+			<label>
+				Severity:
+				@allergy.T_Criticality()
+			</label>
+		</section>
+		<div>
+			<hr class="color-color3"/>
+		</div>
+		<footer style="display:flex; margin: 0px; padding: 0px;">
+			<button type="submit">Save Changes</button>
+			<button type="reset" onclick="this.closest('dialog').close()">
+				Close
+			</button>
+			if allergy != nil && allergy.Id != nil {
+				<button type="button" hx-post={ "/patient/" + patId + "/allergies/delete/" + *allergy.Id } hx-target="body" hx-swap="outerHTML">
+					Delete
+				</button>
+			}
+		</footer>
+	</form>
+}
+
+//edit/new -> hx target form
+//post -> hx target form
+//but! if they submit a valid allergy, retarget body
+
+//generate valuesets - coding lists
+//generate forms
+//	single code field easy
+//	multiple -> take an int
+// 	nested -> take an int
+// maybe string attrs
+
+// package r4Forms
+
+// import r4 "github.com/PotatoEMR/simple-fhir-client/r4"
+
+// func AllergyCriticality(r *r4.AllergyIntolerance) templ.Component {
+// 	current := ""
+// 	if r != nil && r.Criticality != nil {
+// 		current = *r.Criticality
+// 	}
+// 	return CodeSelect("criticality", current, r4.Criticalities)
+// }
+
+// templ CodeSelect(fieldname, current string, valueset []r4.Coding) {
+// 	<select name={ fieldname }>
+// 		<option value="">--</option>
+// 		for _, c := range valueset {
+// 			if c.Code != nil {
+// 				<option
+// 					value={ *c.Code }
+// 					if *c.Code == current {
+// 						selected
+// 					}
+// 				>
+// 					if c.Display == nil {
+// 						{ *c.Code }
+// 					} else {
+// 						{ *c.Display }
+// 					}
+// 				</option>
+// 			}
+// 		}
+// 	</select>
+// }

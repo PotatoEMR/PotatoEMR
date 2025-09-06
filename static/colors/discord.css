@@ -1,0 +1,127 @@
+/*
+sets colors only, doesnt change shape/size, examples: class="color-primary" class="color-primary-hover" class="color-primary shadow" class="color-primary-hover shadow"
+this one based on discord
+imported by default.css if user prefers dark
+*/
+.color-primary, .color-primary-hover {
+   background-color: #5865F2;
+   color: white;
+   border-color: #4752C4;
+}
+.color-primary.shadow, .color-primary-hover.shadow {
+   box-shadow: #4752C4 5px 5px;
+}
+.color-primary-hover:hover {
+   background-color: #4752C4;
+}
+
+.color-color1, .color-color1-hover {
+   background-color: #23272A;
+   color: #B9BBBE;
+   border-color: black;
+}
+.color-color1.shadow, .color-color1-hover.shadow {
+   box-shadow: black 5px 5px;
+}
+.color-color1-hover:hover {
+   background-color: #7289DA;
+   color: black;
+}
+
+.color-color2, .color-color2-hover {
+   background-color: #2F3136;
+   color: #B9BBBE;
+   border-color: black;
+}
+.color-color2.shadow, .color-color2-hover.shadow {
+   box-shadow: black 5px 5px;
+}
+.color-color2-hover:hover {
+   background-color: #7289DA;
+   color: black;
+}
+
+.color-color3, .color-color3-hover {
+   background-color: #36393F;
+   color: #DCDDDE;
+   border-color: black;
+}
+.color-color3.shadow, .color-color3-hover.shadow {
+   box-shadow: black 5px 5px;
+}
+.color-color3-hover:hover {
+   background-color: #7289DA;
+   color: black;
+}
+
+.color-success, .color-success-hover {
+   background-color: #43B581;
+   color: white;
+   border-color: #3CA374;
+}
+.color-success.shadow, .color-success-hover.shadow {
+   box-shadow: #3CA374 5px 5px;
+}
+.color-success-hover:hover {
+   background-color: #3CA374;
+}
+
+.color-danger, .color-danger-hover {
+   background-color: #F04747;
+   color: white;
+   border-color: #a12525;
+}
+.color-danger.shadow, .color-danger-hover.shadow {
+   box-shadow: #a12525 5px 5px;
+}
+.color-danger-hover:hover {
+   background-color: #a12525;
+}
+
+.color-warning, .color-warning-hover {
+   background-color: #FAA61A;
+   color: white;
+   border-color: #F57C00;
+}
+.color-warning.shadow, .color-warning-hover.shadow {
+   box-shadow: #F57C00 5px 5px;
+}
+.color-warning-hover:hover {
+   background-color: #844201;
+}
+
+.color-info, .color-info-hover {
+   background-color: #7289DA;
+   color: white;
+   border-color: #5865F2;
+}
+.color-info.shadow, .color-info-hover.shadow {
+   box-shadow: #5865F2 5px 5px;
+}
+.color-info-hover:hover {
+   background-color: #677BC4;
+}
+
+.color-light, .color-light-hover {
+   background-color: #36393F;
+   color: #DCDDDE;
+   border-color: #2F3136;
+}
+.color-light.shadow, .color-light-hover.shadow {
+   box-shadow: #2F3136 5px 5px;
+}
+.color-light-hover:hover {
+   background-color: #32353B;
+}
+
+.color-dark, .color-dark-hover {
+   background-color: #1E2124;
+   color: white;
+   border-color: #23272A;
+}
+.color-dark.shadow, .color-dark-hover.shadow {
+   box-shadow: #23272A 5px 5px;
+}
+.color-dark-hover:hover {
+   background-color: #23272A;
+}

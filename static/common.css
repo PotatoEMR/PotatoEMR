@@ -1,0 +1,68 @@
+
+html, body {
+    font-family: Arial, sans-serif;
+    margin: 0px;
+    padding: 0px;
+    height: 100%;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.htmx-request .htmx-indicator > *,
+.htmx-request.htmx-indicator > * {
+  display: none !important;
+}
+
+.htmx-request .htmx-indicator::after,
+.htmx-request.htmx-indicator::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 40px;
+  border: 3px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-top: 3px solid currentColor;
+  border-radius: 50%;
+  animation: spin 0.5s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+.butt {
+  border-radius: 4px;
+  border-style: solid;
+  border-width: 1px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.render-input-as-p * input,
+.render-input-as-p * select {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  pointer-events: none;
+}
+
+.render-input-as-p * input::placeholder {
+  color: transparent;
+}

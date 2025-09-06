@@ -1,0 +1,9 @@
+/* sets colors only, doesnt change shape/size, examples:
+class="color-primary"
+class="color-primary-hover"
+class="color-primary shadow"
+class="color-primary-hover shadow"
+*/
+
+@import url("default_light.css") (prefers-color-scheme: light);
+@import url("default_dark.css") (prefers-color-scheme: dark);

@@ -1,0 +1,82 @@
+package pages
+
+import (
+	"net/http"
+
+	utils "github.com/PotatoEMR/PotatoEMR/utils"
+	r4 "github.com/PotatoEMR/simple-fhir-client/r4"
+	r4Client "github.com/PotatoEMR/simple-fhir-client/r4Client"
+)
+
+func SearchPatient(w http.ResponseWriter, req *http.Request) {
+	client := r4Client.New("https://r4.smarthealthit.org")
+	patBundle, err := client.SearchGrouped(&r4Client.SpPatient{Name: req.PostFormValue("search_name")})
+	if err != nil {
+		T_SearchPatientError(err).Render(req.Context(), w)
+	}
+	T_SearchPatientResults(patBundle.Patients).Render(req.Context(), w)
+}
+
+templ T_SearchPatient() {
+	<form
+		id="search-patient-form"
+		hx-post="/searchPatient"
+		hx-target="#search-results"
+		hx-indicator="#search-patient-container"
+		hx-sync="this:replace"
+		hx-trigger="input delay:300ms, input from:#search-birthdate"
+	>
+		<div id="search-fields" style="display: flex; flex-wrap: wrap; column-gap: 30px;">
+			<div>
+				<label for="search-name">Name:</label>
+				<input type="text" name="search_name" id="search-name" placeholder="Name"/>
+			</div>
+			<div>
+				<label for="search-id">MRN:</label>
+				<input type="text" name="search_id" id="search-id" placeholder="MRN"/>
+			</div>
+			<div>
+				<label for="search-birthdate">Birth Date:</label>
+				<input type="date" name="search_birthdate" id="search-birthdate"/>
+			</div>
+			<div>
+				<label for="search-email">Email:</label>
+				<input type="email" name="search_email" id="search-email" placeholder="Email"/>
+			</div>
+			<div>
+				<label for="search-phone">Phone:</label>
+				<input type="tel" name="search_phone" id="search-phone" placeholder="Phone"/>
+			</div>
+		</div>
+	</form>
+	<div id="search-patient-container" style="overflow: auto;">
+		<div id="search-results"></div>
+	</div>
+}
+
+templ T_SearchPatientResults(resultPatientList []*r4.Patient) {
+	<div style="display: flex; flex-direction: column; gap: 4px;">
+		for _, pat := range resultPatientList {
+			<a href={ "/patient/" + *pat.Id + "/overview/" }>
+				<div style="display: flex; gap: 4px;">
+					{{ photoSrc := utils.GetPatientPhotoSrc(pat) }}
+					if photoSrc == nil {
+						<svg width="50px" height="50px" viewBox="0 0 150 150">
+							<path fill="#ccc" d="M 104.68731,56.689353 C 102.19435,80.640493 93.104981,97.26875 74.372196,97.26875 55.639402,97.26875 46.988823,82.308034 44.057005,57.289941 41.623314,34.938838 55.639402,15.800152 74.372196,15.800152 c 18.732785,0 32.451944,18.493971 30.315114,40.889201 z"></path>
+							<path fill="#ccc" d="M 92.5675 89.6048 C 90.79484 93.47893 89.39893 102.4504 94.86478 106.9039 C 103.9375 114.2963 106.7064 116.4723 118.3117 118.9462 C 144.0432 124.4314 141.6492 138.1543 146.5244 149.2206 L 4.268444 149.1023 C 8.472223 138.6518 6.505799 124.7812 32.40051 118.387 C 41.80992 116.0635 45.66513 113.8823 53.58659 107.0158 C 58.52744 102.7329 57.52583 93.99267 56.43084 89.26926 C 52.49275 88.83011 94.1739 88.14054 92.5675 89.6048 z"></path>
+						</svg>
+					} else {
+						<img src={ *photoSrc } style="width: 50px; height: 50px;"/>
+					}
+					<div>
+						<p>{ pat.String() }</p>
+					</div>
+				</div>
+			</a>
+		}
+	</div>
+}
+
+templ T_SearchPatientError(err error) {
+	<p>Error in patient search { err.Error() }</p>
+}

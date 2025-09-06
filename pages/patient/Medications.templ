@@ -1,0 +1,31 @@
+package pages_patient
+
+import (
+	"github.com/PotatoEMR/PotatoEMR/pages"
+	r4 "github.com/PotatoEMR/simple-fhir-client/r4"
+	r4Client "github.com/PotatoEMR/simple-fhir-client/r4Client"
+
+	"fmt"
+	"net/http"
+)
+
+func Medications(w http.ResponseWriter, req *http.Request) {
+	id := req.PathValue("patId")
+	client := r4Client.New("r4.smarthealthit.org/")
+	patEverything, err := client.PatientEverythingGrouped(id)
+
+	if err != nil {
+		pages.ErrorMsg(err).Render(req.Context(), w)
+	} else if len(patEverything.Patients) != 1 {
+		pages.ErrorMsg(fmt.Errorf("patient list should be len 1, is %d", len(patEverything.Patients))).Render(req.Context(), w)
+	} else {
+		pat := patEverything.Patients[0]
+		T_Medications(pat, patEverything).Render(req.Context(), w)
+	}
+}
+
+templ T_Medications(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
+	@Base_Patient(pat, patEverything, TabMedications) {
+		<p>Medications</p>
+	}
+}

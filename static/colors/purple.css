@@ -1,0 +1,122 @@
+/* sets colors only, doesnt change shape/size, examples: class="color-primary" class="color-primary-hover" class="color-primary shadow" class="color-primary-hover shadow"*/
+
+.color-primary, .color-primary-hover {
+    background-color: #000e8f;
+    color: white;
+    border-color: #000000;
+}
+.color-primary.shadow, .color-primary-hover.shadow {
+    box-shadow: #000000 5px 5px;
+}
+.color-primary-hover:hover {
+    background-color: #880000;
+}
+
+.color-color1, .color-color1-hover {
+    background-color: #221133;
+    color: white;
+    border-color: #000000;
+}
+.color-color1.shadow, .color-color1-hover.shadow {
+    box-shadow: #000000 5px 5px;
+}
+.color-color1-hover:hover {
+    background-color: #880000;
+}
+
+.color-color2, .color-color2-hover {
+    background-color: #442266;
+    color: white;
+    border-color: #000000;
+}
+.color-color2.shadow, .color-color2-hover.shadow {
+    box-shadow: #000000 5px 5px;
+}
+.color-color2-hover:hover {
+    background-color: #880000;
+}
+
+.color-color3, .color-color3-hover {
+    background-color: #663399;
+    color: white;
+    border-color: #000000;
+}
+.color-color3.shadow, .color-color3-hover.shadow {
+    box-shadow: #000000 5px 5px;
+}
+.color-color3-hover:hover {
+    background-color: #880000;
+}
+
+.color-success, .color-success-hover {
+    background-color: #198754;
+    color: white;
+    border-color: #000000;
+}
+.color-success.shadow, .color-success-hover.shadow {
+    box-shadow: #000000 5px 5px;
+}
+.color-success-hover:hover {
+    background-color: #0f5132;
+}
+
+
+.color-danger, .color-danger-hover {
+    background-color: #8B008B;
+    color: white;
+    border-color: #000000;
+}
+.color-danger.shadow, .color-danger-hover.shadow {
+    box-shadow: #000000 5px 5px;
+}
+.color-danger-hover:hover {
+    background-color: #5D005D;
+}
+
+.color-warning, .color-warning-hover {
+    background-color: #9370DB;
+    color: white;
+    border-color: #000000;
+}
+.color-warning.shadow, .color-warning-hover.shadow {
+    box-shadow: #000000 5px 5px;
+}
+.color-warning-hover:hover {
+    background-color: #7B68EE;
+}
+
+.color-info, .color-info-hover {
+    background-color: #BA55D3;
+    color: white;
+    border-color: #000000;
+}
+.color-info.shadow, .color-info-hover.shadow {
+    box-shadow: #000000 5px 5px;
+}
+.color-info-hover:hover {
+    background-color: #9370DB;
+}
+
+.color-light, .color-light-hover {
+    background-color: #DDA0DD;
+    color: #000000;
+    border-color: #000000;
+}
+.color-light.shadow, .color-light-hover.shadow {
+    box-shadow: #000000 5px 5px;
+}
+.color-light-hover:hover {
+    background-color: #DA70D6;
+}
+
+.color-dark, .color-dark-hover {
+    background-color: #2E0B57;
+    color: white;
+    border-color: #000000;
+}
+.color-dark.shadow, .color-dark-hover.shadow {
+    box-shadow: #000000 5px 5px;
+}
+.color-dark-hover:hover {
+    background-color: #1A0633;
+}

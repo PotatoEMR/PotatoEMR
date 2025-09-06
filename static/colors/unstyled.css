@@ -1,0 +1,9 @@
+.color-color1, .color-color1-hover, .color-color2, .color-color2-hover, .color-color3, .color-color3-hover {
+    background-color: white;
+}
+/*would be no styles at all, but transparent backgrounds would break some windows and tabs*/
+
+a {
+    color: revert !important;
+    text-decoration: revert !important;
+}
