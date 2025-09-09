@@ -1,9 +1,9 @@
 module github.com/PotatoEMR/PotatoEMR
 
-go 1.24.4
+go 1.25.1
 
 require (
-	github.com/PotatoEMR/simple-fhir-client v0.2.3
+	github.com/PotatoEMR/simple-fhir-client v0.2.7
 	github.com/a-h/templ v0.3.943
 )
 
