@@ -8,9 +8,15 @@ import (
 
 	pages "github.com/PotatoEMR/PotatoEMR/pages"
 	pages_patient "github.com/PotatoEMR/PotatoEMR/pages/patient"
+	"github.com/PotatoEMR/simple-fhir-client/r4Client"
 )
 
 func main() {
+	//	client := r4Client.New("r4.smarthealthit.org/")
+	client := r4Client.New("hapi.fhir.org/baseR4/")
+	pages.Client = client
+	pages_patient.Client = client
+
 	//would like named urls, url params -> func, maybe sub routing
 	mux := http.NewServeMux()
 

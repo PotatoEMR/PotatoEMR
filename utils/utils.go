@@ -60,7 +60,7 @@ func ObservationValueString(obs *r4.Observation) string {
 	} else if obs.ValueTime != nil {
 		return *obs.ValueTime
 	} else if obs.ValueDateTime != nil {
-		return *obs.ValueDateTime
+		return (*obs.ValueDateTime).Format(r4.FhirDateTimeFormat)
 	} else if obs.ValuePeriod != nil {
 		return "period lazy"
 	}

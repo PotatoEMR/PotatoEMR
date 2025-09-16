@@ -9,23 +9,22 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"errors"
 	"github.com/PotatoEMR/PotatoEMR/pages"
 	r4 "github.com/PotatoEMR/simple-fhir-client/r4"
 	r4Client "github.com/PotatoEMR/simple-fhir-client/r4Client"
 
-	"fmt"
 	"net/http"
 )
 
 func Medications(w http.ResponseWriter, req *http.Request) {
-	id := req.PathValue("patId")
-	client := r4Client.New("r4.smarthealthit.org/")
-	patEverything, err := client.PatientEverythingGrouped(id)
+	patId := req.PathValue("patId")
+	patEverything, err := Client.PatientEverythingGrouped(patId)
 
 	if err != nil {
 		pages.ErrorMsg(err).Render(req.Context(), w)
 	} else if len(patEverything.Patients) != 1 {
-		pages.ErrorMsg(fmt.Errorf("patient list should be len 1, is %d", len(patEverything.Patients))).Render(req.Context(), w)
+		pages.ErrorMsg(errors.New("Patient id "+patId+" not found on server "+Client.BaseUrl)).Render(req.Context(), w)
 	} else {
 		pat := patEverything.Patients[0]
 		T_Medications(pat, patEverything).Render(req.Context(), w)

@@ -9,8 +9,7 @@ import (
 )
 
 func SearchPatient(w http.ResponseWriter, req *http.Request) {
-	client := r4Client.New("https://r4.smarthealthit.org")
-	patBundle, err := client.SearchGrouped(&r4Client.SpPatient{Name: req.PostFormValue("search_name")})
+	patBundle, err := Client.SearchGrouped(&r4Client.SpPatient{Name: req.PostFormValue("search_name")})
 	if err != nil {
 		T_SearchPatientError(err).Render(req.Context(), w)
 	}

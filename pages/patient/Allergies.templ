@@ -1,6 +1,7 @@
 package pages_patient
 
 import (
+	"errors"
 	"github.com/PotatoEMR/PotatoEMR/pages"
 	r4 "github.com/PotatoEMR/simple-fhir-client/r4"
 	r4Client "github.com/PotatoEMR/simple-fhir-client/r4Client"
@@ -12,13 +13,18 @@ import (
 
 func Allergies(w http.ResponseWriter, req *http.Request) {
 	patId := req.PathValue("patId")
-	client := r4Client.New("r4.smarthealthit.org/")
-	patEverything, err := client.PatientEverythingGrouped(patId)
+	patEverything, err := Client.PatientEverythingGrouped(patId)
+	for _, a := range patEverything.AllergyIntolerances {
+		fmt.Println(a.OnsetDateTime)
+		if a.OnsetDateTime != nil {
+			fmt.Println("is " + (*a.OnsetDateTime).Format(r4.FhirDateTimeFormat))
+		}
+	}
 
 	if err != nil {
 		pages.ErrorMsg(err).Render(req.Context(), w)
 	} else if len(patEverything.Patients) != 1 {
-		pages.ErrorMsg(fmt.Errorf("patient list should be len 1, is %d", len(patEverything.Patients))).Render(req.Context(), w)
+		pages.ErrorMsg(errors.New("Patient id "+patId+" not found on server "+Client.BaseUrl)).Render(req.Context(), w)
 	} else {
 		pat := patEverything.Patients[0]
 		T_Allergies(pat, patEverything).Render(req.Context(), w)
@@ -52,8 +58,7 @@ func AllergiesCreate(w http.ResponseWriter, req *http.Request) {
 	patId := req.PathValue("patId")
 	refPat := r4.Patient{Id: &patId}
 	allergy := r4.AllergyIntolerance{Criticality: &criticality, Patient: refPat.ToRef(), VerificationStatus: &vs, ClinicalStatus: &cs, Code: &aCC}
-	client := r4Client.New("r4.smarthealthit.org/")
-	test, err := client.CreateAllergyIntolerance(&allergy)
+	test, err := Client.CreateAllergyIntolerance(&allergy)
 	j, _ := json.Marshal(test)
 	fmt.Println(string(j))
 	if err != nil {
@@ -66,16 +71,7 @@ func AllergiesCreate(w http.ResponseWriter, req *http.Request) {
 
 func AllergiesUpdate(w http.ResponseWriter, req *http.Request) {
 	allergyId := req.PathValue("allergyId")
-	client := r4Client.New("r4.smarthealthit.org/")
-	a, _ := client.ReadAllergyIntolerance(allergyId)
-
-	// body, err := io.ReadAll(req.Body)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-	// defer req.Body.Close()
-	// fmt.Println(string(body))
+	a, _ := Client.ReadAllergyIntolerance(allergyId)
 
 	var data r4.AllergyIntolerance
 	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
@@ -83,20 +79,26 @@ func AllergiesUpdate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer req.Body.Close()
-	j, _ := json.Marshal(data)
-	fmt.Println(string(j))
 
 	a.Type = data.Type
+	a.Code = data.Code
+	a.OnsetDateTime = data.OnsetDateTime
+	a.Reaction = []r4.AllergyIntoleranceReaction{}
+	for _, v := range data.Reaction {
+		a.Reaction = append(a.Reaction, v)
+		fmt.Println(*v.Manifestation[0].Coding[0].Display)
+	}
+	a.Note = []r4.Annotation{data.Note[0]}
 
-	client.UpdateAllergyIntolerance(a)
+	_, err := Client.UpdateAllergyIntolerance(a)
+	fmt.Println("update error", err)
 	w.Header().Set("HX-Retarget", "body")
 	Allergies(w, req)
 }
 
 func AllergiesDelete(w http.ResponseWriter, req *http.Request) {
 	allergyId := req.PathValue("allergyId")
-	client := r4Client.New("r4.smarthealthit.org/")
-	client.DeleteAllergyIntoleranceById(allergyId)
+	Client.DeleteAllergyIntoleranceById(allergyId)
 	w.Header().Set("HX-Retarget", "body")
 	Allergies(w, req)
 }
@@ -108,7 +110,6 @@ templ T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
 			<div style="display: flex; align-items: center; gap: 1em;">
 				<h3>Allergies</h3>
 				<dialog
-					potato-drag
 					class="color-color3 shadow"
 					style="position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; cursor: move; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
 				>
@@ -131,7 +132,7 @@ templ T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
 							<td>{ allergy.Code.String() }</td>
 							<td>
 								if allergy.OnsetDateTime != nil {
-									*allergy.onsetDateTime
+									{ (*allergy.OnsetDateTime).Format(r4.FhirDateTimeFormat) }
 								}
 							</td>
 							<td>
@@ -141,7 +142,6 @@ templ T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
 							</td>
 							<td>
 								<dialog
-									potato-drag
 									class="color-color3 shadow"
 									style="position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; cursor: move; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
 								>
@@ -190,7 +190,10 @@ templ T_AllergyForm(patId string, allergy *r4.AllergyIntolerance) {
 		hx-push-url="false"
 		hx-swap="outerHTML"
 	>
-		<header style="display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;">
+		<header
+			potato-drag
+			style="display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;"
+		>
 			<span>
 				if allergy == nil {
 					Add New Allergy
@@ -200,37 +203,37 @@ templ T_AllergyForm(patId string, allergy *r4.AllergyIntolerance) {
 			</span>
 			<button type="button" onclick="this.closest('dialog').close()">✕</button>
 		</header>
-		<div>
+		<div potato-drag>
 			<hr class="color-color3"/>
 		</div>
 		<section style="overflow: auto; display:flex; flex-direction:column; flex: 1">
 			<label>
-				Allergy: 
-				@allergy.T_Code(test, "")
+				Allergy:&nbsp;
+				@allergy.T_Code(test, templ.Attributes{"style": "width: 100px"})
 			</label>
 			<label style="display: flex; flex-direction: row">
-				<div>Reactions:</div>
+				<div>Reactions:&nbsp;</div>
 				<div style="display: flex; flex-direction: column">
-				@allergy.T_ReactionManifestation(0, 0, test, "")
-				@allergy.T_ReactionManifestation(1, 0, test, "")
-				@allergy.T_ReactionManifestation(2, 0, test, "")
+					@allergy.T_ReactionManifestation(0, 0, test, nil)
+					@allergy.T_ReactionManifestation(1, 0, test, nil)
+					@allergy.T_ReactionManifestation(2, 0, test, nil)
 				</div>
 			</label>
 			<label>
-				Reaction Type: 
-				@allergy.T_Type("")
+				Reaction Type:&nbsp;
+				@allergy.T_Type(nil)
 			</label>
 			<label>
-				Severity: 
-				@allergy.T_Criticality("")
+				Severity:&nbsp;
+				@allergy.T_Criticality(nil)
 			</label>
 			<label>
-				Onset: 
-				@allergy.T_OnsetDateTime("")
+				Onset:&nbsp;
+				@allergy.T_OnsetDateTime(nil)
 			</label>
-						<label>
-				Comments: 
-				@allergy.T_Note(0, "")
+			<label>
+				Comments:&nbsp;
+				@allergy.T_Note(0, nil)
 			</label>
 		</section>
 		<div>

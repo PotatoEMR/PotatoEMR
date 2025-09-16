@@ -1,9 +1,11 @@
 package pages_patient
 
-import "github.com/PotatoEMR/PotatoEMR/pages"
-import "github.com/PotatoEMR/simple-fhir-client/r4Client"
-import "github.com/PotatoEMR/simple-fhir-client/r4"
-import "github.com/PotatoEMR/PotatoEMR/utils"
+import (
+	"github.com/PotatoEMR/PotatoEMR/pages"
+	"github.com/PotatoEMR/PotatoEMR/utils"
+	"github.com/PotatoEMR/simple-fhir-client/r4"
+	"github.com/PotatoEMR/simple-fhir-client/r4Client"
+)
 
 //all patient specific pages use base_patient for patient sidebar
 //and links to pages for the particular patient
@@ -27,7 +29,7 @@ templ Base_Patient(pat *r4.Patient, patEverything *r4Client.ResourceGroup, curre
 					<img src={ *photoSrc } alt="Patient Photo" style="width: 150px; height: 150px; margin: auto; display: block; object-fit: contain; border-radius: 5px;"/>
 				}
 				<p>{ pat.String() }</p>
-				<p>{ *pat.BirthDate }</p>
+				<p>{ (*pat.BirthDate).Format(r4.FhirDateFormat) }</p>
 				<p>MRN: { *pat.Id }</p>
 				<div>
 					<p>Problem List:</p>
@@ -64,7 +66,7 @@ templ Base_Patient(pat *r4.Patient, patEverything *r4Client.ResourceGroup, curre
 					for _, dr := range patEverything.DocumentReferences {
 						<p>author { *dr.Author[0].Display }</p>
 						for _, content := range dr.Content {
-							<p>{ *content.Attachment.Title } { *content.Attachment.Creation }</p>
+							<p>{ *content.Attachment.Title } { (*content.Attachment.Creation).Format(r4.FhirDateTimeFormat) }</p>
 						}
 					}
 				</div>
