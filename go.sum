@@ -1,5 +1,5 @@
-github.com/PotatoEMR/simple-fhir-client v0.2.8 h1:oMFLC3eMytD8AAcsZ8eTSQMmIOcjpGLOAt4D/RdqT8Y=
-github.com/PotatoEMR/simple-fhir-client v0.2.8/go.mod h1:xRzKgs4yer1TWrxLqTUjpX+YBhZ8GwjlhRCI5/ZPQBE=
+github.com/PotatoEMR/simple-fhir-client v0.2.12 h1:RZAy+vGxZc5z1+uyfzSiM2jyDN7x82bVl86dGF4KVsA=
+github.com/PotatoEMR/simple-fhir-client v0.2.12/go.mod h1:xRzKgs4yer1TWrxLqTUjpX+YBhZ8GwjlhRCI5/ZPQBE=
 github.com/a-h/parse v0.0.0-20250122154542-74294addb73e h1:HjVbSQHy+dnlS6C3XajZ69NYAb5jbGNfHanvm1+iYlo=
 github.com/a-h/parse v0.0.0-20250122154542-74294addb73e/go.mod h1:3mnrkvGpurZ4ZrTDbYU84xhwXW2TjTKShSwjRi2ihfQ=
 github.com/a-h/templ v0.3.943 h1:o+mT/4yqhZ33F3ootBiHwaY4HM5EVaOJfIshvd5UNTY=

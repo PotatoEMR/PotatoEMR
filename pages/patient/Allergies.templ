@@ -14,12 +14,6 @@ import (
 func Allergies(w http.ResponseWriter, req *http.Request) {
 	patId := req.PathValue("patId")
 	patEverything, err := Client.PatientEverythingGrouped(patId)
-	for _, a := range patEverything.AllergyIntolerances {
-		fmt.Println(a.OnsetDateTime)
-		if a.OnsetDateTime != nil {
-			fmt.Println("is " + (*a.OnsetDateTime).Format(r4.FhirDateTimeFormat))
-		}
-	}
 
 	if err != nil {
 		pages.ErrorMsg(err).Render(req.Context(), w)
@@ -32,35 +26,24 @@ func Allergies(w http.ResponseWriter, req *http.Request) {
 }
 
 func AllergiesCreate(w http.ResponseWriter, req *http.Request) {
-	fmt.Println("Create")
-	err := req.ParseForm()
-	if err != nil {
-		fmt.Println("error parsing form idk")
+
+	var data r4.AllergyIntolerance
+	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+		fmt.Println("where error?", err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	defer req.Body.Close()
 
-	for key, values := range req.Form {
-		fmt.Println(key, values)
-	}
-	aD := req.FormValue("AllergyIntolerance.Code.coding[0].display")
-	aS := req.FormValue("AllergyIntolerance.Code.coding[0].system")
-	aC := req.FormValue("AllergyIntolerance.Code.coding[0].code")
-	aCC := r4.CodeableConcept{Coding: []r4.Coding{r4.Coding{System: &aS, Code: &aC, Display: &aD}}}
-	criticality := req.FormValue("AllergyIntolerance.Criticality")
-	vsD := req.FormValue("AllergyIntolerance.VerificationStatus.coding[0].display")
-	vsS := req.FormValue("AllergyIntolerance.VerificationStatus.coding[0].system")
-	vsC := req.FormValue("AllergyIntolerance.VerificationStatus.coding[0].code")
-	vs := r4.CodeableConcept{Coding: []r4.Coding{r4.Coding{System: &vsS, Code: &vsC, Display: &vsD}}}
-	csD := req.FormValue("AllergyIntolerance.ClinicalStatus.coding[0].display")
-	csS := req.FormValue("AllergyIntolerance.ClinicalStatus.coding[0].system")
-	csC := req.FormValue("AllergyIntolerance.ClinicalStatus.coding[0].code")
-	cs := r4.CodeableConcept{Coding: []r4.Coding{r4.Coding{System: &csS, Code: &csC, Display: &csD}}}
 	patId := req.PathValue("patId")
-	refPat := r4.Patient{Id: &patId}
-	allergy := r4.AllergyIntolerance{Criticality: &criticality, Patient: refPat.ToRef(), VerificationStatus: &vs, ClinicalStatus: &cs, Code: &aCC}
-	test, err := Client.CreateAllergyIntolerance(&allergy)
-	j, _ := json.Marshal(test)
-	fmt.Println(string(j))
+	t1, _ := json.Marshal(data)
+	fmt.Println(string(t1))
+	data.Patient = r4.Patient{Id: &patId}.ToRef()
+	t1, _ = json.Marshal(data)
+	fmt.Println(string(t1))
+
+	_, err := Client.CreateAllergyIntolerance(&data)
+	fmt.Println("created?")
 	if err != nil {
 		fmt.Println("error creating allergy", err)
 	}
@@ -75,6 +58,7 @@ func AllergiesUpdate(w http.ResponseWriter, req *http.Request) {
 
 	var data r4.AllergyIntolerance
 	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+		fmt.Println("where error?", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -88,6 +72,7 @@ func AllergiesUpdate(w http.ResponseWriter, req *http.Request) {
 		a.Reaction = append(a.Reaction, v)
 		fmt.Println(*v.Manifestation[0].Coding[0].Display)
 	}
+	a.Criticality = data.Criticality
 	a.Note = []r4.Annotation{data.Note[0]}
 
 	_, err := Client.UpdateAllergyIntolerance(a)
@@ -111,7 +96,7 @@ templ T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
 				<h3>Allergies</h3>
 				<dialog
 					class="color-color3 shadow"
-					style="position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; cursor: move; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
+					style="position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
 				>
 					@T_AllergyForm(*pat.Id, nil)
 				</dialog>
@@ -132,7 +117,7 @@ templ T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
 							<td>{ allergy.Code.String() }</td>
 							<td>
 								if allergy.OnsetDateTime != nil {
-									{ (*allergy.OnsetDateTime).Format(r4.FhirDateTimeFormat) }
+									{ (*allergy.OnsetDateTime).Format("2006/01/02 15:04") }
 								}
 							</td>
 							<td>
@@ -143,7 +128,7 @@ templ T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
 							<td>
 								<dialog
 									class="color-color3 shadow"
-									style="position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; cursor: move; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
+									style="position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
 								>
 									@T_AllergyForm(*pat.Id, allergy)
 								</dialog>
@@ -179,7 +164,14 @@ var test = []r4.Coding{
 }
 
 templ T_AllergyForm(patId string, allergy *r4.AllergyIntolerance) {
+	{{
+	formId := "allergy_new"
+	if allergy != nil && allergy.Id != nil {
+		formId = "allergy_" + *allergy.Id
+	}
+	}}
 	<form
+		id={ formId }
 		style="display: flex; flex-direction: column; height: 100%;"
 		if allergy == nil || allergy.Id == nil {
 			hx-post={ "/patient/" + patId + "/allergies/create/" }
@@ -189,10 +181,12 @@ templ T_AllergyForm(patId string, allergy *r4.AllergyIntolerance) {
 		hx-ext="form-json"
 		hx-push-url="false"
 		hx-swap="outerHTML"
+		hx-indicator={ "#" + formId }
+		class="htmx-indicator"
 	>
 		<header
 			potato-drag
-			style="display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;"
+			style="cursor: move; display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;"
 		>
 			<span>
 				if allergy == nil {
@@ -206,35 +200,37 @@ templ T_AllergyForm(patId string, allergy *r4.AllergyIntolerance) {
 		<div potato-drag>
 			<hr class="color-color3"/>
 		</div>
-		<section style="overflow: auto; display:flex; flex-direction:column; flex: 1">
-			<label>
-				Allergy:&nbsp;
-				@allergy.T_Code(test, templ.Attributes{"style": "width: 100px"})
-			</label>
-			<label style="display: flex; flex-direction: row">
-				<div>Reactions:&nbsp;</div>
-				<div style="display: flex; flex-direction: column">
-					@allergy.T_ReactionManifestation(0, 0, test, nil)
-					@allergy.T_ReactionManifestation(1, 0, test, nil)
-					@allergy.T_ReactionManifestation(2, 0, test, nil)
+		<section style="flex: 1; overflow: auto; display: flex; flex-wrap: wrap">
+			<div style="width: 360px; display:flex; flex-direction:column; gap: 3px;">
+				<div>
+					<label for={ formId + "code" } style="display: inline-block; width: 120px;">Allergy: </label>
+					@allergy.T_Code(test, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "code"})
 				</div>
-			</label>
-			<label>
-				Reaction Type:&nbsp;
-				@allergy.T_Type(nil)
-			</label>
-			<label>
-				Severity:&nbsp;
-				@allergy.T_Criticality(nil)
-			</label>
-			<label>
-				Onset:&nbsp;
-				@allergy.T_OnsetDateTime(nil)
-			</label>
-			<label>
-				Comments:&nbsp;
-				@allergy.T_Note(0, nil)
-			</label>
+				<div style="display: flex; flex-direction: row">
+					<label for={ formId + "reaction" } style="width: 120px;">Reactions: </label>
+					<div style="display: flex; flex-direction: column">
+						@allergy.T_ReactionManifestation(0, 0, test, templ.Attributes{"style": "width: 220px", "id": formId + "reaction"})
+						@allergy.T_ReactionManifestation(1, 0, test, templ.Attributes{"style": "width: 220px"})
+						@allergy.T_ReactionManifestation(2, 0, test, templ.Attributes{"style": "width: 220px"})
+					</div>
+				</div>
+				<div>
+					<label for={ formId + "type" } style="display: inline-block; width: 120px;">Reaction Type:</label>
+					@allergy.T_Type(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "type"})
+				</div>
+				<div>
+					<label for={ formId + "criticality" } style="display: inline-block; width: 120px;">Severity:</label>
+					@allergy.T_Criticality(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "criticality"})
+				</div>
+				<div>
+					<label for={ formId + "onset" } style="display: inline-block; width: 120px;">Onset:</label>
+					@allergy.T_OnsetDateTime(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "onset"})
+				</div>
+			</div>
+			<div style="display: flex; flex-direction: column; flex: 1">
+				<label for={ formId + "note" } style="display: inline-block; width: 120px;">Comments:</label>
+				@allergy.T_Note(0, templ.Attributes{"style": "width: 300px; height: 150px;", "id": formId + "note"})
+			</div>
 		</section>
 		<div>
 			<hr class="color-color3"/>

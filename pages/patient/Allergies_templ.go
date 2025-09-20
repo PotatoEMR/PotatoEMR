@@ -22,12 +22,6 @@ import (
 func Allergies(w http.ResponseWriter, req *http.Request) {
 	patId := req.PathValue("patId")
 	patEverything, err := Client.PatientEverythingGrouped(patId)
-	for _, a := range patEverything.AllergyIntolerances {
-		fmt.Println(a.OnsetDateTime)
-		if a.OnsetDateTime != nil {
-			fmt.Println("is " + (*a.OnsetDateTime).Format(r4.FhirDateTimeFormat))
-		}
-	}
 
 	if err != nil {
 		pages.ErrorMsg(err).Render(req.Context(), w)
@@ -40,35 +34,24 @@ func Allergies(w http.ResponseWriter, req *http.Request) {
 }
 
 func AllergiesCreate(w http.ResponseWriter, req *http.Request) {
-	fmt.Println("Create")
-	err := req.ParseForm()
-	if err != nil {
-		fmt.Println("error parsing form idk")
+
+	var data r4.AllergyIntolerance
+	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+		fmt.Println("where error?", err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	defer req.Body.Close()
 
-	for key, values := range req.Form {
-		fmt.Println(key, values)
-	}
-	aD := req.FormValue("AllergyIntolerance.Code.coding[0].display")
-	aS := req.FormValue("AllergyIntolerance.Code.coding[0].system")
-	aC := req.FormValue("AllergyIntolerance.Code.coding[0].code")
-	aCC := r4.CodeableConcept{Coding: []r4.Coding{r4.Coding{System: &aS, Code: &aC, Display: &aD}}}
-	criticality := req.FormValue("AllergyIntolerance.Criticality")
-	vsD := req.FormValue("AllergyIntolerance.VerificationStatus.coding[0].display")
-	vsS := req.FormValue("AllergyIntolerance.VerificationStatus.coding[0].system")
-	vsC := req.FormValue("AllergyIntolerance.VerificationStatus.coding[0].code")
-	vs := r4.CodeableConcept{Coding: []r4.Coding{r4.Coding{System: &vsS, Code: &vsC, Display: &vsD}}}
-	csD := req.FormValue("AllergyIntolerance.ClinicalStatus.coding[0].display")
-	csS := req.FormValue("AllergyIntolerance.ClinicalStatus.coding[0].system")
-	csC := req.FormValue("AllergyIntolerance.ClinicalStatus.coding[0].code")
-	cs := r4.CodeableConcept{Coding: []r4.Coding{r4.Coding{System: &csS, Code: &csC, Display: &csD}}}
 	patId := req.PathValue("patId")
-	refPat := r4.Patient{Id: &patId}
-	allergy := r4.AllergyIntolerance{Criticality: &criticality, Patient: refPat.ToRef(), VerificationStatus: &vs, ClinicalStatus: &cs, Code: &aCC}
-	test, err := Client.CreateAllergyIntolerance(&allergy)
-	j, _ := json.Marshal(test)
-	fmt.Println(string(j))
+	t1, _ := json.Marshal(data)
+	fmt.Println(string(t1))
+	data.Patient = r4.Patient{Id: &patId}.ToRef()
+	t1, _ = json.Marshal(data)
+	fmt.Println(string(t1))
+
+	_, err := Client.CreateAllergyIntolerance(&data)
+	fmt.Println("created?")
 	if err != nil {
 		fmt.Println("error creating allergy", err)
 	}
@@ -83,6 +66,7 @@ func AllergiesUpdate(w http.ResponseWriter, req *http.Request) {
 
 	var data r4.AllergyIntolerance
 	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+		fmt.Println("where error?", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -96,6 +80,7 @@ func AllergiesUpdate(w http.ResponseWriter, req *http.Request) {
 		a.Reaction = append(a.Reaction, v)
 		fmt.Println(*v.Manifestation[0].Coding[0].Display)
 	}
+	a.Criticality = data.Criticality
 	a.Note = []r4.Annotation{data.Note[0]}
 
 	_, err := Client.UpdateAllergyIntolerance(a)
@@ -152,7 +137,7 @@ func T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ.C
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div style=\"display: flex; align-items: center; gap: 1em;\"><h3>Allergies</h3><dialog class=\"color-color3 shadow\" style=\"position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; cursor: move; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div style=\"display: flex; align-items: center; gap: 1em;\"><h3>Allergies</h3><dialog class=\"color-color3 shadow\" style=\"position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -172,7 +157,7 @@ func T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ.C
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(allergy.Code.String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Allergies.templ`, Line: 132, Col: 34}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 117, Col: 34}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -184,9 +169,9 @@ func T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ.C
 				}
 				if allergy.OnsetDateTime != nil {
 					var templ_7745c5c3_Var4 string
-					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs((*allergy.OnsetDateTime).Format(r4.FhirDateTimeFormat))
+					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs((*allergy.OnsetDateTime).Format("2006/01/02 15:04"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Allergies.templ`, Line: 135, Col: 65}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 120, Col: 62}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
@@ -205,7 +190,7 @@ func T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ.C
 					var templ_7745c5c3_Var5 string
 					templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(allergy.Note[0].Text)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Allergies.templ`, Line: 140, Col: 118}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 125, Col: 118}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 					if templ_7745c5c3_Err != nil {
@@ -216,7 +201,7 @@ func T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ.C
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</td><td><dialog class=\"color-color3 shadow\" style=\"position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; cursor: move; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</td><td><dialog class=\"color-color3 shadow\" style=\"position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -283,147 +268,256 @@ func T_AllergyForm(patId string, allergy *r4.AllergyIntolerance) templ.Component
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<form style=\"display: flex; flex-direction: column; height: 100%;\"")
+
+		formId := "allergy_new"
+		if allergy != nil && allergy.Id != nil {
+			formId = "allergy_" + *allergy.Id
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<form id=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var7 string
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(formId)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 174, Col: 13}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" style=\"display: flex; flex-direction: column; height: 100%;\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if allergy == nil || allergy.Id == nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, " hx-post=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var7 string
-			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs("/patient/" + patId + "/allergies/create/")
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Allergies.templ`, Line: 185, Col: 55}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, " hx-post=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, " hx-post=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var8 string
-			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs("/patient/" + patId + "/allergies/update/" + *allergy.Id)
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs("/patient/" + patId + "/allergies/create/")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Allergies.templ`, Line: 187, Col: 69}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 177, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, " hx-ext=\"form-json\" hx-push-url=\"false\" hx-swap=\"outerHTML\"><header potato-drag style=\"display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;\"><span>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if allergy == nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "Add New Allergy")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(allergy.Code.String())
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, " hx-post=\"")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Allergies.templ`, Line: 201, Col: 28}
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var9 string
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs("/patient/" + patId + "/allergies/update/" + *allergy.Id)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 179, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</span> <button type=\"button\" onclick=\"this.closest('dialog').close()\">✕</button></header><div potato-drag><hr class=\"color-color3\"></div><section style=\"overflow: auto; display:flex; flex-direction:column; flex: 1\"><label>Allergy:&nbsp;")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, " hx-ext=\"form-json\" hx-push-url=\"false\" hx-swap=\"outerHTML\" hx-indicator=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = allergy.T_Code(test, templ.Attributes{"style": "width: 100px"}).Render(ctx, templ_7745c5c3_Buffer)
+		var templ_7745c5c3_Var10 string
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs("#" + formId)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 184, Col: 29}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</label> <label style=\"display: flex; flex-direction: row\"><div>Reactions:&nbsp;</div><div style=\"display: flex; flex-direction: column\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\" class=\"htmx-indicator\"><header potato-drag style=\"cursor: move; display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;\"><span>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = allergy.T_ReactionManifestation(0, 0, test, nil).Render(ctx, templ_7745c5c3_Buffer)
+		if allergy == nil {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "Add New Allergy")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			var templ_7745c5c3_Var11 string
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(allergy.Code.String())
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 195, Col: 28}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</span> <button type=\"button\" onclick=\"this.closest('dialog').close()\">✕</button></header><div potato-drag><hr class=\"color-color3\"></div><section style=\"flex: 1; overflow: auto; display: flex; flex-wrap: wrap\"><div style=\"width: 360px; display:flex; flex-direction:column; gap: 3px;\"><div><label for=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = allergy.T_ReactionManifestation(1, 0, test, nil).Render(ctx, templ_7745c5c3_Buffer)
+		var templ_7745c5c3_Var12 string
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(formId + "code")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 206, Col: 33}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = allergy.T_ReactionManifestation(2, 0, test, nil).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\" style=\"display: inline-block; width: 120px;\">Allergy: </label>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</div></label> <label>Reaction Type:&nbsp;")
+		templ_7745c5c3_Err = allergy.T_Code(test, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "code"}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = allergy.T_Type(nil).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</div><div style=\"display: flex; flex-direction: row\"><label for=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</label> <label>Severity:&nbsp;")
+		var templ_7745c5c3_Var13 string
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(formId + "reaction")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 210, Col: 37}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = allergy.T_Criticality(nil).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\" style=\"width: 120px;\">Reactions: </label><div style=\"display: flex; flex-direction: column\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</label> <label>Onset:&nbsp;")
+		templ_7745c5c3_Err = allergy.T_ReactionManifestation(0, 0, test, templ.Attributes{"style": "width: 220px", "id": formId + "reaction"}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = allergy.T_OnsetDateTime(nil).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = allergy.T_ReactionManifestation(1, 0, test, templ.Attributes{"style": "width: 220px"}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</label> <label>Comments:&nbsp;")
+		templ_7745c5c3_Err = allergy.T_ReactionManifestation(2, 0, test, templ.Attributes{"style": "width: 220px"}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = allergy.T_Note(0, nil).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</div></div><div><label for=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</label></section><div><hr class=\"color-color3\"></div><footer style=\"display:flex; margin: 0px; padding: 0px;\"><button type=\"submit\">Save Changes</button> <button type=\"reset\" onclick=\"this.closest('dialog').close()\">Close</button> ")
+		var templ_7745c5c3_Var14 string
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(formId + "type")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 218, Col: 33}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" style=\"display: inline-block; width: 120px;\">Reaction Type:</label>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = allergy.T_Type(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "type"}).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</div><div><label for=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var15 string
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(formId + "criticality")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 222, Col: 40}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\" style=\"display: inline-block; width: 120px;\">Severity:</label>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = allergy.T_Criticality(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "criticality"}).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</div><div><label for=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var16 string
+		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(formId + "onset")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 226, Col: 34}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "\" style=\"display: inline-block; width: 120px;\">Onset:</label>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = allergy.T_OnsetDateTime(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "onset"}).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</div></div><div style=\"display: flex; flex-direction: column; flex: 1\"><label for=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var17 string
+		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(formId + "note")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 231, Col: 32}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\" style=\"display: inline-block; width: 120px;\">Comments:</label>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = allergy.T_Note(0, templ.Attributes{"style": "width: 300px; height: 150px;", "id": formId + "note"}).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</div></section><div><hr class=\"color-color3\"></div><footer style=\"display:flex; margin: 0px; padding: 0px;\"><button type=\"submit\">Save Changes</button> <button type=\"reset\" onclick=\"this.closest('dialog').close()\">Close</button> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if allergy != nil && allergy.Id != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<button type=\"button\" hx-post=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "<button type=\"button\" hx-post=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var10 string
-			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs("/patient/" + patId + "/allergies/delete/" + *allergy.Id)
+			var templ_7745c5c3_Var18 string
+			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs("/patient/" + patId + "/allergies/delete/" + *allergy.Id)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Allergies.templ`, Line: 248, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Allergies.templ`, Line: 244, Col: 92}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\" hx-target=\"body\" hx-swap=\"outerHTML\">Delete</button>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\" hx-target=\"body\" hx-swap=\"outerHTML\">Delete</button>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</footer></form>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</footer></form>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
