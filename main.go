@@ -12,8 +12,8 @@ import (
 )
 
 func main() {
-	//	client := r4Client.New("r4.smarthealthit.org/")
-	client := r4Client.New("hapi.fhir.org/baseR4/")
+	client := r4Client.New("r4.smarthealthit.org/")
+	// client := r4Client.New("hapi.fhir.org/baseR4/")
 	pages.Client = client
 	pages_patient.Client = client
 
@@ -35,6 +35,9 @@ func main() {
 	mux.HandleFunc("GET /patient/{patId}/immunizations/", pages_patient.Immunizations)
 	mux.HandleFunc("GET /patient/{patId}/medications/", pages_patient.Medications)
 	mux.HandleFunc("GET /patient/{patId}/overview/", pages_patient.Overview)
+
+	mux.HandleFunc("GET /patient/{patId}/vitalsigns/", pages_patient.ObservationVitalSigns)
+	mux.HandleFunc("POST /patient/{patId}/vitalsigns/create/", pages_patient.ObservationVitalSignsCreate)
 
 	fmt.Println("running on http://127.0.0.1:8000/")
 	http.ListenAndServe(":8000", mux)

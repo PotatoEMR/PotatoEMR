@@ -3,6 +3,7 @@ package pages
 //all pages use base_nav for a few top links (not specific to a particular patient)
 //and patient search
 templ Base_Nav() {
+	<!DOCTYPE html>
 	<html lang="en" style="height: 100%; margin: 0; padding: 0;">
 		<head>
 			<meta charset="UTF-8"/>
@@ -14,7 +15,6 @@ templ Base_Nav() {
 			<script defer src="/static/htmx.js"></script>
 			<script defer src="/static/form-json.js"></script>
 			<link rel="stylesheet" href="/static/colors/default_light.css"/>
-			// <script src="/static/form-json.js"></script>
 			<script defer src="/static/potatoDrag.js"></script>
 		</head>
 		<body style="display: flex; flex-direction: column;">
@@ -25,12 +25,17 @@ templ Base_Nav() {
 				style="display: flex; padding-left: 2px; position: relative; border-bottom-width: 2px; border-bottom-style: solid; line-height: 1.2em;"
 			>
 				<a class="color-color1-hover" style="padding: 4px" href="/">PotatoEMR🥔</a>
-				<dialog class="color-color1" style="z-index: 100">
-					<menu style="display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;">
+				<dialog
+					id="search_patient_dialog"
+					hx-preserve
+					class="color-color1 shadow"
+					style="position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
+				>
+					<menu potato-drag style="cursor: move; display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;">
 						<span>Patient Search</span>
 						<button onclick="this.closest('dialog').close()">✕</button>
 					</menu>
-					<hr class="color-color1"/>
+					<hr potato-drag style="cursor: move;" class="color-color1"/>
 					<section style="height: 300px; width: 60vw; overflow: auto; display:flex; flex-direction:column;">
 						@T_SearchPatient()
 					</section>

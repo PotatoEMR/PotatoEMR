@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"errors"
 	"strconv"
+	"time"
 
 	r4 "github.com/PotatoEMR/simple-fhir-client/r4"
 )
@@ -65,4 +67,30 @@ func ObservationValueString(obs *r4.Observation) string {
 		return "period lazy"
 	}
 	return ""
+}
+
+func ObservationTime(obs *r4.Observation) (*string, error) {
+	if obs.EffectiveDateTime != nil {
+		ret := obs.EffectiveDateTime.Format(time.DateTime)
+		return &ret, nil
+	} else if obs.EffectiveInstant != nil {
+		return obs.EffectiveInstant, nil
+	} else if obs.EffectivePeriod != nil {
+		return nil, errors.New("period lazy")
+	} else if obs.EffectiveTiming != nil {
+		return nil, errors.New("timing lazy")
+	}
+	return nil, errors.New("ObservationTime none of Observation.effective[x] populated, obs has no time")
+}
+
+func ParseHTMLDateTimeLocal(s string) (time.Time, error) {
+	var t time.Time
+	var err error
+	for _, layout := range []string{"2006-01-02T15:04", "2006-01-02T15:04:05"} {
+		t, err = time.Parse(layout, s)
+		if err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, err
 }

@@ -1,4 +1,13 @@
 //https://github.com/xehrad/form-json/blob/main/form-json.js
+//included by pages\1_Base_Nav.templ
+//  <script defer src="/static/form-json.js"></script>
+//and main.go 
+//  fs := http.FileServer(http.Dir("static"))
+//	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
+//normally form inputs become key/value pairs in request body
+//this htmx extension converts form inputs to json
+//json is easier for handler func to parse
+//for example: ???
 (function () {
   let api
   const _ConfigIgnoreDeepKey_ = 'ignore-deep-key'

@@ -29,8 +29,16 @@ templ Base_Patient(pat *r4.Patient, patEverything *r4Client.ResourceGroup, curre
 					<img src={ *photoSrc } alt="Patient Photo" style="width: 150px; height: 150px; margin: auto; display: block; object-fit: contain; border-radius: 5px;"/>
 				}
 				<p>{ pat.String() }</p>
-				<p>{ (*pat.BirthDate).Format(r4.FhirDateFormat) }</p>
-				<p>MRN: { *pat.Id }</p>
+				if pat.BirthDate == nil {
+					<p>Birthday N/A</p>
+				} else {
+					<p>{ (*pat.BirthDate).Format(r4.FhirDateFormat) }</p>
+				}
+				if pat.Id == nil {
+					<p>No MRN (no id in fhir server??)</p>
+				} else {
+					<p>MRN: { *pat.Id }</p>
+				}
 				<div>
 					<p>Problem List:</p>
 					for _, condition := range patEverything.Conditions {
@@ -47,12 +55,6 @@ templ Base_Patient(pat *r4.Patient, patEverything *r4Client.ResourceGroup, curre
 					<p>Medications:</p>
 					for _, med := range patEverything.Medications {
 						<p>{ med.Code.String() }</p>
-					}
-				</div>
-				<div>
-					<p>Observations:</p>
-					for _, obs := range patEverything.Observations {
-						<p>{ obs.Code.String() }</p>
 					}
 				</div>
 				<div>
@@ -95,11 +97,11 @@ templ Base_Patient(pat *r4.Patient, patEverything *r4Client.ResourceGroup, curre
 						}
 					}
 				</nav>
-				<div style="padding: 8px; flex: 1; min-height: 0;">
+				<div style="padding: 8px; flex: 1; min-height: 0; display: flex;">
 					<div
 						id="patient-content"
 						class="htmx-indicator color-color3"
-						style="height: 100%; overflow: auto;"
+						style="height: 100%; width: 100%; overflow: auto;"
 					>
 						{ children... }
 					</div>
@@ -120,6 +122,7 @@ const (
 	TabAllergies
 	TabMedications
 	TabImmunizationHistory
+	TabVitalSigns
 )
 
 var tabLabels = []string{
@@ -128,7 +131,7 @@ var tabLabels = []string{
 	"Allergies",
 	"Medications",
 	"Immunization History",
-}
+	"Vital Signs"}
 
 var tabLinks = []string{
 	"overview",
@@ -136,4 +139,5 @@ var tabLinks = []string{
 	"allergies",
 	"medications",
 	"immunizations",
+	"vitalsigns",
 }

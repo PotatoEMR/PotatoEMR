@@ -26,10 +26,8 @@ func Allergies(w http.ResponseWriter, req *http.Request) {
 }
 
 func AllergiesCreate(w http.ResponseWriter, req *http.Request) {
-
 	var data r4.AllergyIntolerance
 	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
-		fmt.Println("where error?", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -197,7 +195,7 @@ templ T_AllergyForm(patId string, allergy *r4.AllergyIntolerance) {
 			</span>
 			<button type="button" onclick="this.closest('dialog').close()">✕</button>
 		</header>
-		<div potato-drag>
+		<div potato-drag style="cursor: move">
 			<hr class="color-color3"/>
 		</div>
 		<section style="flex: 1; overflow: auto; display: flex; flex-wrap: wrap">
