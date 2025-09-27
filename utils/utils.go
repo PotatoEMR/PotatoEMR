@@ -82,15 +82,3 @@ func ObservationTime(obs *r4.Observation) (*string, error) {
 	}
 	return nil, errors.New("ObservationTime none of Observation.effective[x] populated, obs has no time")
 }
-
-func ParseHTMLDateTimeLocal(s string) (time.Time, error) {
-	var t time.Time
-	var err error
-	for _, layout := range []string{"2006-01-02T15:04", "2006-01-02T15:04:05"} {
-		t, err = time.Parse(layout, s)
-		if err == nil {
-			return t, nil
-		}
-	}
-	return time.Time{}, err
-}

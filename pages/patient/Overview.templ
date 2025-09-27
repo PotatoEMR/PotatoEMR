@@ -37,7 +37,7 @@ func Overview(w http.ResponseWriter, req *http.Request) {
 }
 
 templ OverviewCard(cardName, color string) {
-	<div style={ "border: 5px solid " + color + "; border-radius: 4px; margin: 8px; padding: 8px; width: 350px; word-wrap: break-word; overflow-wrap: break-word;" }>
+	<div style={ "border: 5px solid " + color + "; border-radius: 4px; margin: 8px; padding: 8px; word-wrap: break-word; overflow-wrap: break-word;" }>
 		<div style="display: inline-block; margin-top: 8px; margin-bottom: 16px;">
 			<span style={ "background-color: " + color + "; border-radius: 4px; padding: 8px; color: black;" }>{ cardName }</span>
 		</div>
@@ -50,7 +50,7 @@ templ T_Overview(pat *r4.Patient, patEverything *r4Client.ResourceGroup, patCare
 	@Base_Patient(pat, patEverything, TabOverview) {
 		<h3>Overview</h3>
 		//would really prefer masonry layout https://masonry.desandro.com/ but no css way, needs js for layout
-		<div style="display: flex; flex-wrap: wrap;">
+		<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap:10px;">
 			@OverviewCard("Patient Info", "#1cdfed") {
 				<p>{ "Name: " + pat.String() }</p>
 				<div>

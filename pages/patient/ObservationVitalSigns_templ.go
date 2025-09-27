@@ -64,28 +64,34 @@ func ObservationVitalSigns(w http.ResponseWriter, req *http.Request) {
 	T_ObservationVitalSigns(pat, patEverything, vitalsByTimeAndCode).Render(req.Context(), w)
 }
 
+type VitalsTimeAndValues struct {
+	Time   r4.FhirDateTime    `json:"time"`
+	Values map[string]float64 `json:"values"`
+}
+
 func ObservationVitalSignsCreate(w http.ResponseWriter, req *http.Request) {
 	patId := req.PathValue("patId")
-	fmt.Println("vsc", patId)
-	var observations map[string]string
+	var observations VitalsTimeAndValues
 	if err := json.NewDecoder(req.Body).Decode(&observations); err != nil {
-		pages.ErrorMsg(errors.New("failed to unmarshal observation json")).Render(req.Context(), w)
+		pages.ErrorMsg(errors.New("Could not parse submitted vital sign observations")).Render(req.Context(), w)
+		fmt.Println(err)
 		return
 	}
-	time, err := utils.ParseHTMLDateTimeLocal(observations["time"])
-	if err != nil {
-		pages.ErrorMsg(errors.New("failed to parse observation time "+err.Error())).Render(req.Context(), w)
-		return
-	}
-	obsTime := r4.FhirDateTime{time}
-	loincSystem := "HMMM"
+	loincSystem := r4.VSObservation_vitalsignresult[0].System
 	for _, codeAndName := range codeAndNames {
-		obs, ok := observations[codeAndName.name]
+		obsFloat, ok := observations.Values[codeAndName.name]
 		if ok {
-			obsCoding := r4.Coding{Code: &codeAndName.name, System: &loincSystem}
+			obsQty := r4.Quantity{Value: &obsFloat, Unit: &codeAndName.unit}
+			obsCoding := r4.Coding{Code: &codeAndName.code, System: loincSystem}
 			obsCodeableConcept := r4.CodeableConcept{Coding: []r4.Coding{obsCoding}}
-			newObs := r4.Observation{EffectiveDateTime: &obsTime, ValueString: &obs, Code: obsCodeableConcept}
-			fmt.Println(newObs)
+			patRef := r4.Patient{Id: &patId}.ToRef()
+			newObs := r4.Observation{Subject: &patRef, EffectiveDateTime: &observations.Time, ValueQuantity: &obsQty, Code: obsCodeableConcept}
+			_, err := Client.CreateObservation(&newObs)
+			if err != nil {
+				pages.ErrorMsg(errors.New("ObservationVitalSignsCreate failed to create obs: "+err.Error())).Render(req.Context(), w)
+				fmt.Println("err")
+				return
+			}
 		}
 	}
 	ObservationVitalSigns(w, req)
@@ -94,20 +100,21 @@ func ObservationVitalSignsCreate(w http.ResponseWriter, req *http.Request) {
 type codeAndName struct {
 	code string
 	name string
+	unit string
 }
 
 var codeAndNames = []codeAndName{
-	{code: "29463-7", name: "Body weight"},
-	{code: "8302-2", name: "Body height"},
-	{code: "9843-4", name: "Head circumference"},
-	{code: "39156-5", name: "Body mass index"},
-	{code: "9279-1", name: "Respiratory Rate"},
-	{code: "8867-4", name: "Heart rate"},
-	{code: "2708-6", name: "Oxygen saturation"},
-	{code: "8310-5", name: "Body temperature"},
-	{code: "85354-9", name: "Blood pressure systolic and diastolic"},
-	{code: "8480-6", name: "Systolic blood pressure"},
-	{code: "8462-4", name: "Diastolic blood pressure"},
+	{code: "29463-7", name: "Body weight", unit: "kg"},
+	{code: "8302-2", name: "Body height", unit: "cm"},
+	{code: "9843-4", name: "Head circumference", unit: "cm"},
+	{code: "39156-5", name: "Body mass index", unit: "kg/m²"},
+	{code: "9279-1", name: "Respiratory Rate", unit: "/min"},
+	{code: "8867-4", name: "Heart rate", unit: "/min"},
+	{code: "2708-6", name: "Oxygen saturation", unit: "%O2"},
+	{code: "8310-5", name: "Body temperature", unit: "°C"},
+	{code: "85354-9", name: "Blood pressure systolic and diastolic", unit: "mm[Hg]"},
+	{code: "8480-6", name: "Systolic blood pressure", unit: "mm[Hg]"},
+	{code: "8462-4", name: "Diastolic blood pressure", unit: "mm[Hg]"},
 }
 
 func T_ObservationVitalSigns(pat *r4.Patient, patEverything *r4Client.ResourceGroup, vitalsByTimeAndCode map[string]map[string]r4.Observation) templ.Component {
@@ -160,7 +167,7 @@ func T_ObservationVitalSigns(pat *r4.Patient, patEverything *r4Client.ResourceGr
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs("/patient/" + *pat.Id + "/vitalsigns/create/")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/ObservationVitalSigns.templ`, Line: 127, Col: 58}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/ObservationVitalSigns.templ`, Line: 134, Col: 58}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -178,7 +185,7 @@ func T_ObservationVitalSigns(pat *r4.Patient, patEverything *r4Client.ResourceGr
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(k)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/ObservationVitalSigns.templ`, Line: 139, Col: 14}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/ObservationVitalSigns.templ`, Line: 146, Col: 14}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -201,7 +208,7 @@ func T_ObservationVitalSigns(pat *r4.Patient, patEverything *r4Client.ResourceGr
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(codeAndName.name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/ObservationVitalSigns.templ`, Line: 145, Col: 29}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/ObservationVitalSigns.templ`, Line: 152, Col: 29}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -221,7 +228,7 @@ func T_ObservationVitalSigns(pat *r4.Patient, patEverything *r4Client.ResourceGr
 						var templ_7745c5c3_Var6 string
 						templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(utils.ObservationValueString(&obs))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/ObservationVitalSigns.templ`, Line: 149, Col: 49}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/ObservationVitalSigns.templ`, Line: 156, Col: 49}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 						if templ_7745c5c3_Err != nil {
@@ -243,20 +250,33 @@ func T_ObservationVitalSigns(pat *r4.Patient, patEverything *r4Client.ResourceGr
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var7 string
-				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(codeAndName.name)
+				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs("values." + codeAndName.name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/ObservationVitalSigns.templ`, Line: 154, Col: 41}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/ObservationVitalSigns.templ`, Line: 163, Col: 50}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\"></td></tr>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" type=\"number\" step=\"0.01\" style=\"width: 80px; margin-right: 2px;\"><span>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var8 string
+				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs("(" + codeAndName.unit + ")")
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/ObservationVitalSigns.templ`, Line: 166, Col: 44}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</span></td></tr>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</table><div style=\"text-align: right; margin-top: 2px;\"><button type=\"submit\">Save New Vitals Panel</button></div></div></form>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</table><div style=\"text-align: right; margin-top: 2px;\"><button type=\"submit\">Save New Vitals Panel</button></div></div></form>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
