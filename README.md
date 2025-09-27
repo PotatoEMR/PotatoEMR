@@ -20,6 +20,7 @@ PotatoEMR is a simple(ish) EMR that stores data in a FHIR server. Try a demo onl
 	```
  4. Visit [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
+Note that you don't need templ to build/run the .go files, but you need templ to change any .templ file. You probably also want to install the templ extension for your IDE.
 
 ### Box Diagram/Table of Contents
 
