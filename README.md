@@ -1,28 +1,24 @@
 # [🥔PotatoEMR.com (click here try now)](https://potatoemr.com)
 
-PotatoEMR is a simple(ish) EMR that uses a FHIR server to store data. Try a demo online at [https://potatoemr.com](https://potatoemr.com).
+PotatoEMR is a simple(ish) EMR that stores data in a FHIR server. Try a demo online at [https://potatoemr.com](https://potatoemr.com).
 
 ### Quick Start
 
-1. Download [Go](https://go.dev/) from [https://go.dev/dl/](https://go.dev/dl/)
+1. Download Go from [https://go.dev/dl/](https://go.dev/dl/)
 2. Download [templ](https://templ.guide/)
 
     ```bash
     go install github.com/a-h/templ/cmd/templ@latest
     ```
 
-3. Clone PotatoEMR
+3. Clone PotatoEMR and build
 
     ```bash
     git clone https://github.com/PotatoEMR/PotatoEMR.git
-    ```
-4. cd and run
-	
-	```bash
 	cd PotatoEMR
-	go tool templ generate && go run .
+	templ generate && go run .
 	```
- 5. Visit [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+ 4. Visit [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
 
 ### Box Diagram/Table of Contents
