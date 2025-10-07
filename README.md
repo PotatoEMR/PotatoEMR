@@ -58,10 +58,10 @@ The user's browser and the FHIR server are sort of their own thing. HTMX makes h
 ### Example 1: load patient allergy page
 
 <pre>
-User clicks link LINK??
-Browser sends GET request REQ???
-	HTTP server receives request, mux matches to handler func ???
-		Fhir client sends patientEverything request to fhir server
+User clicks link https://potatoemr.com/patient/1480486/allergies/
+Browser sends GET request
+	HTTP server receives request, matches mux.HandleFunc("GET /patient/{patId}/allergies/", pages_patient.Allergies)
+		Fhir client sends to fhir server patEverything, err := Client.PatientEverythingGrouped(patId)
 		Fhir client gets resources back in structs
 	Func passes structs to templ to render html
 	HTTP server sends html response back to browser
@@ -84,5 +84,6 @@ Browser sends POST request REQ???
 	HTTP server sends html response back to browser
 Browser inserts html response into page
 </pre>
+
 
 Key differences are the browser sending the form as a json in request body to potatoemr, so we can easily unmarshal it into an r4.AllergyIntolerance, and the additional update request to fhir server. If you're familiar with fhir update, you might ask why the additional patientEverything on top of the update, because update already returns the updated resource. That could require oob swaps, which htmx can do but are tricker, vs simply getting all patient resources and updating the whole page like before. On the other hand, this makes an additional request to the fhir server and takes longer. One other step, handler func combines user's changes with existing allergy, is also not great; it exists only because fhir patch is much tricker than update, as there are two types of patch and what's supported varies by server, and "add each of my resource fields to the old resource, creating if they don't exist or updating if they do" in patch seems non trivial. But I would like to use patch if possible. And of course it is a lot of pieces so you might rightly ask why use a separate FHIR server. It makes some implementation and interoperability easier.
