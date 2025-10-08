@@ -8,7 +8,8 @@ import (
 )
 
 //all patient specific pages use base_patient for patient sidebar
-//and links to pages for the particular patient
+//and for links to pages specific to the particular patient
+//such as patient allergies, patient demographics, etc
 templ Base_Patient(pat *r4.Patient, patEverything *r4Client.ResourceGroup, currentTab Tab) {
 	@pages.Base_Nav() {
 		<div style="height: 100%; display: flex;">
@@ -66,10 +67,17 @@ templ Base_Patient(pat *r4.Patient, patEverything *r4Client.ResourceGroup, curre
 				<div>
 					<p>Notes:</p>
 					for _, dr := range patEverything.DocumentReferences {
-						<p>author { *dr.Author[0].Display }</p>
-						for _, content := range dr.Content {
-							<p>{ *content.Attachment.Title } { (*content.Attachment.Creation).Format(r4.FhirDateTimeFormat) }</p>
-						}
+						<div style="margin-top: 4px; margin-bottom: 4px;">
+							for _, content := range dr.Content {
+								if content.Attachment.Title != nil {
+									<span style="margin-right: 4px;">{ *content.Attachment.Title }</span>
+								}
+								<span style="margin-right: 4px;">{ (*dr).Author[0].String() }</span>
+								if content.Attachment.Creation != nil {
+									<span style="margin-right: 4px;">{ (*content.Attachment.Creation).Format("2006-01-02") }</span>
+								}
+							}
+						</div>
 					}
 				</div>
 			</nav>
@@ -118,7 +126,7 @@ type Tab int
 
 const (
 	TabOverview Tab = iota
-	TabDemographics
+	TabPatientInfo
 	TabAllergies
 	TabMedications
 	TabImmunizationHistory
@@ -127,7 +135,7 @@ const (
 
 var tabLabels = []string{
 	"Overview",
-	"Demographics",
+	"Patient Info",
 	"Allergies",
 	"Medications",
 	"Immunization History",
@@ -135,7 +143,7 @@ var tabLabels = []string{
 
 var tabLinks = []string{
 	"overview",
-	"demographics",
+	"patientinfo",
 	"allergies",
 	"medications",
 	"immunizations",

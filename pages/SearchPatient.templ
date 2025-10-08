@@ -9,7 +9,18 @@ import (
 )
 
 func SearchPatient(w http.ResponseWriter, req *http.Request) {
-	patBundle, err := Client.SearchGrouped(&r4Client.SpPatient{Name: req.PostFormValue("search_name")})
+	SearchParams := r4Client.SpPatient{
+		Name:       req.PostFormValue("search_name"),
+		Phone:      req.PostFormValue("search_phone"),
+		Email:      req.PostFormValue("search_email"), //input type="email" means NONE of fields will submit while no @ sign in email
+		Birthdate:  req.PostFormValue("search_birthdate"),
+		Identifier: req.PostFormValue("search_id"),
+	}
+	if SearchParams == (r4Client.SpPatient{}) {
+		T_Empty().Render(req.Context(), w)
+		return
+	}
+	patBundle, err := Client.SearchGrouped(&SearchParams)
 	if err != nil {
 		T_SearchPatientError(err).Render(req.Context(), w)
 	}
@@ -25,7 +36,7 @@ templ T_SearchPatient() {
 		hx-sync="this:replace"
 		hx-trigger="input delay:300ms, input from:#search-birthdate"
 	>
-		<div id="search-fields" style="display: flex; flex-wrap: wrap; column-gap: 30px;">
+		<div id="search-fields" style="display: grid; grid-template-columns: repeat(auto-fit, 300px); gap:4px;">
 			<div>
 				<label for="search-name">Name:</label>
 				<input type="text" name="search_name" id="search-name" placeholder="Name"/>
@@ -82,4 +93,7 @@ templ T_SearchPatientResults(resultPatientList []*r4.Patient) {
 
 templ T_SearchPatientError(err error) {
 	<p>Error in patient search { err.Error() }</p>
+}
+
+templ T_Empty() {
 }

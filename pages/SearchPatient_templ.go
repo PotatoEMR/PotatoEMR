@@ -17,7 +17,18 @@ import (
 )
 
 func SearchPatient(w http.ResponseWriter, req *http.Request) {
-	patBundle, err := Client.SearchGrouped(&r4Client.SpPatient{Name: req.PostFormValue("search_name")})
+	SearchParams := r4Client.SpPatient{
+		Name:       req.PostFormValue("search_name"),
+		Phone:      req.PostFormValue("search_phone"),
+		Email:      req.PostFormValue("search_email"), //input type="email" means NONE of fields will submit while no @ sign in email
+		Birthdate:  req.PostFormValue("search_birthdate"),
+		Identifier: req.PostFormValue("search_id"),
+	}
+	if SearchParams == (r4Client.SpPatient{}) {
+		T_Empty().Render(req.Context(), w)
+		return
+	}
+	patBundle, err := Client.SearchGrouped(&SearchParams)
 	if err != nil {
 		T_SearchPatientError(err).Render(req.Context(), w)
 	}
@@ -45,7 +56,7 @@ func T_SearchPatient() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form id=\"search-patient-form\" hx-post=\"/searchPatient\" hx-target=\"#search-results\" hx-indicator=\"#search-patient-container\" hx-sync=\"this:replace\" hx-trigger=\"input delay:300ms, input from:#search-birthdate\"><div id=\"search-fields\" style=\"display: flex; flex-wrap: wrap; column-gap: 30px;\"><div><label for=\"search-name\">Name:</label> <input type=\"text\" name=\"search_name\" id=\"search-name\" placeholder=\"Name\"></div><div><label for=\"search-id\">MRN:</label> <input type=\"text\" name=\"search_id\" id=\"search-id\" placeholder=\"MRN\"></div><div><label for=\"search-birthdate\">Birth Date:</label> <input type=\"date\" name=\"search_birthdate\" id=\"search-birthdate\"></div><div><label for=\"search-email\">Email:</label> <input type=\"email\" name=\"search_email\" id=\"search-email\" placeholder=\"Email\"></div><div><label for=\"search-phone\">Phone:</label> <input type=\"tel\" name=\"search_phone\" id=\"search-phone\" placeholder=\"Phone\"></div></div></form><div id=\"search-patient-container\" style=\"overflow: auto;\" class=\"htmx-indicator\"><div id=\"search-results\"></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form id=\"search-patient-form\" hx-post=\"/searchPatient\" hx-target=\"#search-results\" hx-indicator=\"#search-patient-container\" hx-sync=\"this:replace\" hx-trigger=\"input delay:300ms, input from:#search-birthdate\"><div id=\"search-fields\" style=\"display: grid; grid-template-columns: repeat(auto-fit, 300px); gap:4px;\"><div><label for=\"search-name\">Name:</label> <input type=\"text\" name=\"search_name\" id=\"search-name\" placeholder=\"Name\"></div><div><label for=\"search-id\">MRN:</label> <input type=\"text\" name=\"search_id\" id=\"search-id\" placeholder=\"MRN\"></div><div><label for=\"search-birthdate\">Birth Date:</label> <input type=\"date\" name=\"search_birthdate\" id=\"search-birthdate\"></div><div><label for=\"search-email\">Email:</label> <input type=\"email\" name=\"search_email\" id=\"search-email\" placeholder=\"Email\"></div><div><label for=\"search-phone\">Phone:</label> <input type=\"tel\" name=\"search_phone\" id=\"search-phone\" placeholder=\"Phone\"></div></div></form><div id=\"search-patient-container\" style=\"overflow: auto;\" class=\"htmx-indicator\"><div id=\"search-results\"></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -92,7 +103,7 @@ func T_SearchPatientResults(resultPatientList []*r4.Patient) templ.Component {
 				var templ_7745c5c3_Var3 templ.SafeURL
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinURLErrs("/patient/" + *pat.Id + "/overview/")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/SearchPatient.templ`, Line: 62, Col: 91}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/SearchPatient.templ`, Line: 73, Col: 91}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -116,7 +127,7 @@ func T_SearchPatientResults(resultPatientList []*r4.Patient) templ.Component {
 					var templ_7745c5c3_Var4 string
 					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(*photoSrc)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/SearchPatient.templ`, Line: 71, Col: 27}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/SearchPatient.templ`, Line: 82, Col: 27}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
@@ -134,7 +145,7 @@ func T_SearchPatientResults(resultPatientList []*r4.Patient) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(pat.String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/SearchPatient.templ`, Line: 74, Col: 24}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/SearchPatient.templ`, Line: 85, Col: 24}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -182,7 +193,7 @@ func T_SearchPatientError(err error) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(err.Error())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/SearchPatient.templ`, Line: 84, Col: 41}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/SearchPatient.templ`, Line: 95, Col: 41}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -192,6 +203,31 @@ func T_SearchPatientError(err error) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
+		return nil
+	})
+}
+
+func T_Empty() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var8 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var8 == nil {
+			templ_7745c5c3_Var8 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
 		return nil
 	})
 }

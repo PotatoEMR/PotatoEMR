@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 
@@ -12,8 +13,11 @@ import (
 )
 
 func main() {
-	client := r4Client.New("r4.smarthealthit.org/")
-	// client := r4Client.New("hapi.fhir.org/baseR4/")
+	port := flag.String("port", "8000", "will run potatoemr on 127.0.0.1:<port>")
+	fhirServer := flag.String("fhirServer", "r4.smarthealthit.org/", "will run potatoemr on 127.0.0.1:<port>")
+	flag.Parse()
+
+	client := r4Client.New(*fhirServer)
 	pages.Client = client
 	pages_patient.Client = client
 
@@ -31,14 +35,19 @@ func main() {
 	mux.HandleFunc("POST /patient/{patId}/allergies/update/{allergyId}", pages_patient.AllergiesUpdate)
 	mux.HandleFunc("POST /patient/{patId}/allergies/delete/{allergyId}", pages_patient.AllergiesDelete)
 
-	mux.HandleFunc("GET /patient/{patId}/demographics/", pages_patient.Demographics)
+	mux.HandleFunc("GET /patient/{patId}/patientinfo/", pages_patient.PatientInfo)
+
 	mux.HandleFunc("GET /patient/{patId}/immunizations/", pages_patient.Immunizations)
+	mux.HandleFunc("POST /patient/{patId}/immunizations/create/", pages_patient.ImmunizationsCreate)
+	mux.HandleFunc("POST /patient/{patId}/immunizations/update/{immId}", pages_patient.ImmunizationsUpdate)
+	mux.HandleFunc("POST /patient/{patId}/immunizations/delete/{immId}", pages_patient.ImmunizationsDelete)
+
 	mux.HandleFunc("GET /patient/{patId}/medications/", pages_patient.Medications)
 	mux.HandleFunc("GET /patient/{patId}/overview/", pages_patient.Overview)
 
 	mux.HandleFunc("GET /patient/{patId}/vitalsigns/", pages_patient.ObservationVitalSigns)
 	mux.HandleFunc("POST /patient/{patId}/vitalsigns/create/", pages_patient.ObservationVitalSignsCreate)
 
-	fmt.Println("running on http://127.0.0.1:8000/")
-	http.ListenAndServe(":8000", mux)
+	fmt.Println("🥔🥔🥔 PotatoEMR running on http://127.0.0.1:" + *port)
+	http.ListenAndServe(":"+*port, mux)
 }
