@@ -29,16 +29,19 @@ templ Base_Nav() {
 					id="search_patient_dialog"
 					hx-preserve
 					class="color-color1 shadow"
-					style="position: absolute; top: 20vh; height: 50vh; right: 2vw; width: 70vw; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
+					style="height:50vh; position: absolute; top: 20vh; width: 70vw; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
 				>
-					<menu potato-drag style="cursor: move; display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;">
-						<span>Patient Search</span>
-						<button onclick="this.closest('dialog').close()">✕</button>
-					</menu>
-					<hr potato-drag style="cursor: move;" class="color-color1"/>
-					<section style="height: 300px; width: 60vw; overflow: auto; display:flex; flex-direction:column;">
-						@T_SearchPatient()
-					</section>
+					<div style="display:flex; flex-direction:column; height: 100%">
+						//adding display flex to dialog itself breaks closing it
+						<menu potato-drag style="cursor: move; display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;">
+							<span>Patient Search</span>
+							<button onclick="this.closest('dialog').close()">✕</button>
+						</menu>
+						<hr potato-drag style="cursor: move; width: 100%;" class="color-color1"/>
+						<section style="flex:1; overflow:auto; display:flex; flex-direction:column;">
+							@T_SearchPatient()
+						</section>
+					</div>
 				</dialog>
 				<span class="color-color1-hover" style="padding: 4px; cursor: pointer; text-decoration: underline;" onclick="this.previousElementSibling.show()">Search Patient</span>
 				<a class="color-color1-hover" style="padding: 4px" href="/registerpatient">Register Patient</a>
