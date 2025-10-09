@@ -30,7 +30,7 @@ func SearchPatient(w http.ResponseWriter, req *http.Request) {
 templ T_SearchPatient() {
 	<form
 		id="search-patient-form"
-		hx-post="/searchPatient"
+		hx-post="/searchpatient"
 		hx-target="#search-results"
 		hx-indicator="#search-patient-container"
 		hx-sync="this:replace"

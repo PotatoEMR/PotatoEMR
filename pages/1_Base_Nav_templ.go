@@ -39,7 +39,7 @@ func Base_Nav() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section></dialog> <span class=\"color-color1-hover\" style=\"padding: 4px; cursor: pointer; text-decoration: underline;\" onclick=\"this.previousElementSibling.show()\">Search Patient</span> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/registerPatient\">Register Patient</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/calendar\">Calendar</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/lists\">Patient Lists</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/settings\">Settings</a></nav><main id=\"main-content\" class=\"color-color3\" style=\"flex: 1; overflow: auto;\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section></dialog> <span class=\"color-color1-hover\" style=\"padding: 4px; cursor: pointer; text-decoration: underline;\" onclick=\"this.previousElementSibling.show()\">Search Patient</span> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/registerpatient\">Register Patient</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/calendar\">Calendar</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/patientlists\">Patient Lists</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/settings\">Settings</a></nav><main id=\"main-content\" class=\"color-color3\" style=\"flex: 1; overflow: auto;\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

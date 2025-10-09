@@ -13,7 +13,14 @@ import (
 
 func Overview(w http.ResponseWriter, req *http.Request) {
 	patId := req.PathValue("patId")
+	fmt.Println("patId is", patId)
 	patEverything, err := Client.PatientEverythingGrouped(patId)
+
+	if err != nil || len(patEverything.Patients) != 1 {
+		pages.ErrorMsg(errors.New("Patient id "+patId+" not found on server "+Client.BaseUrl)).Render(req.Context(), w)
+		return
+	}
+
 	ctBundle, err2 := Client.SearchGrouped(r4Client.SpCareTeam{Patient: patId})
 	vitalsByCode := make(map[string]r4.Observation)
 	for _, obs := range patEverything.Observations {
@@ -26,14 +33,12 @@ func Overview(w http.ResponseWriter, req *http.Request) {
 	}
 	fmt.Println("map", vitalsByCode)
 
-	if err != nil || err2 != nil {
-		pages.ErrorMsg(err).Render(req.Context(), w)
-	} else if len(patEverything.Patients) != 1 {
-		pages.ErrorMsg(errors.New("Patient id "+patId+" not found on server "+Client.BaseUrl)).Render(req.Context(), w)
-	} else {
-		pat := patEverything.Patients[0]
-		T_Overview(pat, patEverything, ctBundle.CareTeams).Render(req.Context(), w)
+	if err2 != nil {
+		pages.ErrorMsg(err2).Render(req.Context(), w)
+		return
 	}
+	pat := patEverything.Patients[0]
+	T_Overview(pat, patEverything, ctBundle.CareTeams).Render(req.Context(), w)
 }
 
 templ OverviewCard(cardName, color string) {

@@ -9,17 +9,14 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import "net/http"
-import "errors"
+import "fmt"
 
-func Index(w http.ResponseWriter, req *http.Request) {
-	if req.URL.Path != "/" {
-		ErrorMsg(errors.New("url not found: "+req.URL.Path)).Render(req.Context(), w)
-		return
-	}
-	T_Index().Render(req.Context(), w)
+func RegisterPatient(w http.ResponseWriter, req *http.Request) {
+	fmt.Println("hello")
+	T_RegisterPatient().Render(req.Context(), w)
 }
 
-func T_Index() templ.Component {
+func T_RegisterPatient() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -52,7 +49,7 @@ func T_Index() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h1>hi 4</h1>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h1>register patient</h1>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

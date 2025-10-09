@@ -21,7 +21,14 @@ import (
 
 func Overview(w http.ResponseWriter, req *http.Request) {
 	patId := req.PathValue("patId")
+	fmt.Println("patId is", patId)
 	patEverything, err := Client.PatientEverythingGrouped(patId)
+
+	if err != nil || len(patEverything.Patients) != 1 {
+		pages.ErrorMsg(errors.New("Patient id "+patId+" not found on server "+Client.BaseUrl)).Render(req.Context(), w)
+		return
+	}
+
 	ctBundle, err2 := Client.SearchGrouped(r4Client.SpCareTeam{Patient: patId})
 	vitalsByCode := make(map[string]r4.Observation)
 	for _, obs := range patEverything.Observations {
@@ -34,14 +41,12 @@ func Overview(w http.ResponseWriter, req *http.Request) {
 	}
 	fmt.Println("map", vitalsByCode)
 
-	if err != nil || err2 != nil {
-		pages.ErrorMsg(err).Render(req.Context(), w)
-	} else if len(patEverything.Patients) != 1 {
-		pages.ErrorMsg(errors.New("Patient id "+patId+" not found on server "+Client.BaseUrl)).Render(req.Context(), w)
-	} else {
-		pat := patEverything.Patients[0]
-		T_Overview(pat, patEverything, ctBundle.CareTeams).Render(req.Context(), w)
+	if err2 != nil {
+		pages.ErrorMsg(err2).Render(req.Context(), w)
+		return
 	}
+	pat := patEverything.Patients[0]
+	T_Overview(pat, patEverything, ctBundle.CareTeams).Render(req.Context(), w)
 }
 
 func OverviewCard(cardName, color string) templ.Component {
@@ -72,7 +77,7 @@ func OverviewCard(cardName, color string) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("border: 5px solid " + color + "; border-radius: 4px; margin: 8px; padding: 8px; word-wrap: break-word; overflow-wrap: break-word;")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 40, Col: 145}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 45, Col: 145}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -85,7 +90,7 @@ func OverviewCard(cardName, color string) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues("background-color: " + color + "; border-radius: 4px; padding: 8px; color: black;")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 42, Col: 99}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 47, Col: 99}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -98,7 +103,7 @@ func OverviewCard(cardName, color string) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(cardName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 42, Col: 112}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 47, Col: 112}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -177,7 +182,7 @@ func T_Overview(pat *r4.Patient, patEverything *r4Client.ResourceGroup, patCareT
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs("Name: " + pat.String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 55, Col: 32}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 60, Col: 32}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
@@ -195,7 +200,7 @@ func T_Overview(pat *r4.Patient, patEverything *r4Client.ResourceGroup, patCareT
 					var templ_7745c5c3_Var9 string
 					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs((*pat.BirthDate).Format("January 2, 2006"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 58, Col: 63}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 63, Col: 63}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
@@ -223,7 +228,7 @@ func T_Overview(pat *r4.Patient, patEverything *r4Client.ResourceGroup, patCareT
 					var templ_7745c5c3_Var10 string
 					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(addr.String())
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 65, Col: 28}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 70, Col: 28}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
@@ -286,7 +291,7 @@ func T_Overview(pat *r4.Patient, patEverything *r4Client.ResourceGroup, patCareT
 						var templ_7745c5c3_Var12 string
 						templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(gp.String())
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 83, Col: 26}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 88, Col: 26}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 						if templ_7745c5c3_Err != nil {
@@ -325,7 +330,7 @@ func T_Overview(pat *r4.Patient, patEverything *r4Client.ResourceGroup, patCareT
 							var templ_7745c5c3_Var13 string
 							templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(*ct.Name + ":")
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 95, Col: 31}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 100, Col: 31}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 							if templ_7745c5c3_Err != nil {
@@ -343,7 +348,7 @@ func T_Overview(pat *r4.Patient, patEverything *r4Client.ResourceGroup, patCareT
 							var templ_7745c5c3_Var14 string
 							templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs("Care Team " + strconv.Itoa(i) + ":")
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 97, Col: 53}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 102, Col: 53}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 							if templ_7745c5c3_Err != nil {
@@ -379,7 +384,7 @@ func T_Overview(pat *r4.Patient, patEverything *r4Client.ResourceGroup, patCareT
 							var templ_7745c5c3_Var15 string
 							templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(part.Member.String())
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 107, Col: 37}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 112, Col: 37}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 							if templ_7745c5c3_Err != nil {
@@ -430,7 +435,7 @@ func T_Overview(pat *r4.Patient, patEverything *r4Client.ResourceGroup, patCareT
 					var templ_7745c5c3_Var17 string
 					templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(obs.Code.String())
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 117, Col: 28}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/patient/Overview.templ`, Line: 122, Col: 28}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 					if templ_7745c5c3_Err != nil {

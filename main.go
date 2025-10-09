@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/a-h/templ"
-
 	pages "github.com/PotatoEMR/PotatoEMR/pages"
 	pages_patient "github.com/PotatoEMR/PotatoEMR/pages/patient"
 	"github.com/PotatoEMR/simple-fhir-client/r4Client"
@@ -27,8 +25,12 @@ func main() {
 	fs := http.FileServer(http.Dir("static"))
 	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
 
-	mux.Handle("GET /", templ.Handler(pages.Index()))
-	mux.HandleFunc("POST /searchPatient", pages.SearchPatient)
+	mux.HandleFunc("GET /", pages.Index)
+	mux.HandleFunc("POST /searchpatient", pages.SearchPatient)
+	mux.HandleFunc("GET /registerpatient", pages.RegisterPatient)
+	mux.HandleFunc("GET /calendar", pages.Calendar)
+	mux.HandleFunc("GET /patientlists", pages.PatientLists)
+	mux.HandleFunc("GET /settings", pages.Settings)
 
 	mux.HandleFunc("GET /patient/{patId}/allergies/", pages_patient.Allergies)
 	mux.HandleFunc("POST /patient/{patId}/allergies/create/", pages_patient.AllergiesCreate)
