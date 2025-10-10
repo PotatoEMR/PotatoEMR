@@ -1,0 +1,13 @@
+package main
+
+import "net/http"
+
+func my_PatientLists(w http.ResponseWriter, req *http.Request) {
+	T_PatientLists().Render(req.Context(), w)
+}
+
+templ T_PatientLists() {
+	@my_Base_Nav() {
+		<h1>PatientLists</h1>
+	}
+}

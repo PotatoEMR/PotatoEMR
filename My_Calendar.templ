@@ -1,0 +1,13 @@
+package main
+
+import "net/http"
+
+func my_Calendar(w http.ResponseWriter, req *http.Request) {
+	T_Calendar().Render(req.Context(), w)
+}
+
+templ T_Calendar() {
+	@my_Base_Nav() {
+		<h1>Calendar</h1>
+	}
+}

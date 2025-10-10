@@ -1,0 +1,13 @@
+package main
+
+import "net/http"
+
+func my_Settings(w http.ResponseWriter, req *http.Request) {
+	T_Settings().Render(req.Context(), w)
+}
+
+templ T_Settings() {
+	@my_Base_Nav() {
+		<h1>Settings</h1>
+	}
+}

@@ -1,0 +1,60 @@
+package main
+
+import (
+	"errors"
+	r4 "github.com/PotatoEMR/simple-fhir-client/r4"
+	r4Client "github.com/PotatoEMR/simple-fhir-client/r4Client"
+
+	"net/http"
+)
+
+func patient_PatientInfo(w http.ResponseWriter, req *http.Request) {
+	patId := req.PathValue("patId")
+	patEverything, err := client.PatientEverythingGrouped(patId)
+
+	if err != nil {
+		ErrorMsg(err).Render(req.Context(), w)
+	} else if len(patEverything.Patients) != 1 {
+		ErrorMsg(errors.New("Patient id "+patId+" not found on server "+client.BaseUrl)).Render(req.Context(), w)
+	} else {
+		pat := patEverything.Patients[0]
+		T_PatientInfo(pat, patEverything).Render(req.Context(), w)
+	}
+}
+
+templ T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
+	@patient_Base_Nav(pat, patEverything, TabPatientInfo) {
+		<h3>Patient Info</h3>
+		<form>
+			<div>
+				<span style="display: inline-block; width: 200px;">MRN: </span>
+				//identifier might be business id but idk if dont have identifier maybe show pat.id
+				if pat != nil && len(pat.Identifier) != 0 {
+					<span style="display: inline-block; width: 220px;" id="mrn">{ pat.Identifier[0].String() }</span>
+				} else if pat.Id != nil {
+					<span style="display: inline-block; width: 220px;" id="mrn">{ *pat.Id }</span>
+				} else {
+					<span style="display: inline-block; width: 220px;" id="mrn">N/A</span>
+				}
+			</div>
+			<div>
+				<label for="birthdate" style="display: inline-block; width: 200px;">Birthday: </label>
+				@pat.T_BirthDate(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": "birthdate"})
+			</div>
+			<div>
+				<label for="gender" style="display: inline-block; width: 200px;">Gender: </label>
+				@pat.T_Gender(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": "gender"})
+			</div>
+			<p>race</p>
+			<p>ethnicity</p>
+			<div>
+				<label for="telecom" style="display: inline-block; width: 200px;">Patient Phone Number: </label>
+				@pat.T_Telecom(0, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": "telecom"})
+			</div>
+			<div>
+				<label for="contact" style="display: inline-block; width: 200px;">Contact Phone Number: </label>
+				@pat.T_ContactTelecom(0, 0, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": "contact"})
+			</div>
+		</form>
+	}
+}

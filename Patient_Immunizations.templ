@@ -1,0 +1,427 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	r4 "github.com/PotatoEMR/simple-fhir-client/r4"
+	r4Client "github.com/PotatoEMR/simple-fhir-client/r4Client"
+
+	"net/http"
+	"time"
+)
+
+func patient_ImmunizationsCreate(w http.ResponseWriter, req *http.Request) {
+	var data r4.Immunization
+	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer req.Body.Close()
+
+	patId := req.PathValue("patId")
+	data.Patient = r4.Patient{Id: &patId}.ToRef()
+
+	c, err := client.CreateImmunization(&data)
+	s, _ := json.Marshal(data)
+	fmt.Println(string(s))
+	fmt.Println("create error", err)
+	cs, _ := json.Marshal(c)
+	fmt.Println(string(cs))
+
+	w.Header().Set("HX-Retarget", "body")
+	patient_Immunizations(w, req)
+}
+
+func patient_ImmunizationsUpdate(w http.ResponseWriter, req *http.Request) {
+	fmt.Println("hello")
+	immId := req.PathValue("immId")
+	imm, _ := client.ReadImmunization(immId)
+
+	var data r4.Immunization
+	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+		fmt.Println("where error?", err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer req.Body.Close()
+
+	//awkward copying because patch operation not done
+	imm.VaccineCode = data.VaccineCode
+	imm.Status = data.Status
+	imm.StatusReason = data.StatusReason
+	imm.OccurrenceDateTime = data.OccurrenceDateTime
+	imm.Performer = data.Performer
+	imm.LotNumber = data.LotNumber
+	imm.DoseQuantity = data.DoseQuantity
+	imm.ExpirationDate = data.ExpirationDate
+	imm.Route = data.Route
+	imm.Site = data.Site
+	imm.FundingSource = data.FundingSource
+	imm.Note = data.Note
+
+	_, err := client.UpdateImmunization(imm)
+	fmt.Println("update error", err)
+	w.Header().Set("HX-Retarget", "body")
+	patient_Immunizations(w, req)
+}
+
+func patient_ImmunizationsDelete(w http.ResponseWriter, req *http.Request) {
+	immId := req.PathValue("immId")
+	_, err := client.DeleteImmunizationById(immId)
+	if err != nil {
+		fmt.Println("error deleting", err)
+	}
+	w.Header().Set("HX-Retarget", "body")
+	patient_Immunizations(w, req)
+}
+
+// shows Immunizations (done and not done) and ImmunizationRecommendations (done and not done)
+// also want to group all Immunizations of each vaccine together in table
+// so create a vaccineGroup list that has all Immunizations and ImmunizationRecommendations for that vaccine
+// then map of vaccine string -> vaccineGroup (cant use vaccineCode codeableConcept as key)
+// if vaccines have same code in different systems seems like a problem for later
+// ???
+// can add/edit Immunizations but no mechanism for adding a new ImmunizationRecommendation
+type vaccineGroup struct {
+	imm    []*r4.Immunization
+	immRec []*r4.ImmunizationRecommendation
+}
+
+// vaccine, status, number administered, next rec date, last action, last action date
+func patient_Immunizations(w http.ResponseWriter, req *http.Request) {
+	patId := req.PathValue("patId")
+	patEverything, err := client.PatientEverythingGrouped(patId)
+	practitionerList, _ := client.SearchGrouped(r4Client.SpPractitioner{})
+	vaccineGroups := make(map[string]vaccineGroup)
+	for _, imm := range patEverything.Immunizations {
+		fmt.Println("imm", *imm.Id)
+		if len(imm.VaccineCode.Coding) != 0 && imm.VaccineCode.Coding[0].Code != nil {
+			vaccineCodeStr := *imm.VaccineCode.Coding[0].Code
+			grp := vaccineGroups[vaccineCodeStr]
+			grp.imm = append(grp.imm, imm)
+			vaccineGroups[vaccineCodeStr] = grp
+		}
+	}
+	//assuming there's only 1 rec per ImmunizationRecommendations, although you could have more
+	for _, immRec := range patEverything.ImmunizationRecommendations {
+		if len(immRec.Recommendation) != 0 && len(immRec.Recommendation[0].VaccineCode) != 0 && len(immRec.Recommendation[0].VaccineCode[0].Coding) != 0 && immRec.Recommendation[0].VaccineCode[0].Coding[0].Code != nil {
+			vaccineCodeStr := *immRec.Recommendation[0].VaccineCode[0].Coding[0].Code
+			grp := vaccineGroups[vaccineCodeStr]
+			grp.immRec = append(grp.immRec, immRec)
+			vaccineGroups[vaccineCodeStr] = grp
+		}
+	}
+
+	if err != nil {
+		ErrorMsg(err).Render(req.Context(), w)
+	} else if len(patEverything.Patients) != 1 {
+		ErrorMsg(errors.New("Patient id "+patId+" not found on server "+client.BaseUrl)).Render(req.Context(), w)
+	} else {
+		pat := patEverything.Patients[0]
+		T_Immunizations(pat, patEverything, vaccineGroups, practitionerList.Practitioners).Render(req.Context(), w)
+	}
+}
+
+//administratePractitioners needed to pass in the list of people who could administer the vaccine to select from
+templ T_Immunizations(pat *r4.Patient, patEverything *r4Client.ResourceGroup, vaccineGroups map[string]vaccineGroup, administratePractitioners []*r4.Practitioner) {
+	@patient_Base_Nav(pat, patEverything, TabImmunizationHistory) {
+		<div id="immunizations-page" class="color-color3" style="margin: 4px; padding: 4px;">
+			{ children... }
+			<div style="display: flex; align-items: center; gap: 1em;">
+				<h3>Immunizations</h3>
+				<dialog
+					class="color-color3 shadow"
+					style="position: absolute; top: 10vh; height: 80vh; overflow: auto; right: 2vw; width: 70vw; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
+				>
+					@T_ImmunizationsForm(*pat.Id, nil, administratePractitioners)
+				</dialog>
+				<button onclick="this.previousElementSibling.show()">
+					Add New Immunization
+				</button>
+			</div>
+			<table>
+				<thead>
+					<th>Vaccine</th>
+					<th>Status</th>
+					<th>Next Due</th>
+					<th>Date Administered</th>
+					<th>Notes</th>
+					<th></th>
+				</thead>
+				<tbody>
+					for vaccineStr, grp := range vaccineGroups {
+						{{
+							var nextDueDate *time.Time
+							var mostRecentStatus string
+							var mostRecentStatusTime *time.Time
+							for _, rec := range grp.immRec {
+								hasStatus := len(rec.Recommendation[0].ForecastStatus.Coding) != 0
+								hasDate := len(rec.Recommendation[0].DateCriterion) != 0
+								if hasStatus && hasDate {
+									//check if rec has most recent status
+									if mostRecentStatusTime == nil || rec.Recommendation[0].DateCriterion[0].Value.Time.After(*mostRecentStatusTime) {
+										mostRecentStatusTime = &rec.Recommendation[0].DateCriterion[0].Value.Time
+										mostRecentStatus = rec.Recommendation[0].ForecastStatus.Coding[0].String()
+									}
+									//check if rec is next due
+									statusCode := *rec.Recommendation[0].ForecastStatus.Coding[0].Code
+									due := *r4.VSImmunization_recommendation_status[0].Code
+									overdue := *r4.VSImmunization_recommendation_status[1].Code
+									if statusCode == due || statusCode == overdue {
+										if nextDueDate == nil {
+											nextDueDate = &rec.Recommendation[0].DateCriterion[0].Value.Time
+										} else {
+											if rec.Recommendation[0].DateCriterion[0].Value.Time.Before(*nextDueDate) {
+												nextDueDate = &rec.Recommendation[0].DateCriterion[0].Value.Time
+											}
+										}
+									}
+								}
+							}
+						}}
+						<tr>
+							<td>
+								//vaccine
+								{ vaccineStr }
+							</td>
+							<td>
+								//status
+								if mostRecentStatusTime != nil {
+									{ mostRecentStatus }
+								}
+							</td>
+							<td>
+								//next due
+								if nextDueDate != nil {
+									{ nextDueDate.Format("2006/01/02") }
+								}
+							</td>
+							<td>
+								//date administered list
+								for _, imm := range grp.imm {
+									<p>{ imm.OccurrenceDateTime.Format("2006/01/02") }</p>
+								}
+							</td>
+							<td>
+								//note list
+								for _, imm := range grp.imm {
+									if len(imm.Note) != 0 {
+										<p style="width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{ imm.Note[0].Text }</p>
+									}
+								}
+							</td>
+							<td>
+								//edit button
+								for _, imm := range grp.imm {
+									<dialog
+										class="color-color3 shadow"
+										style="position: absolute; top: 10vh; height: 80vh; overflow: auto; right: 2vw; width: 70vw; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;"
+									>
+										@T_ImmunizationsForm(*pat.Id, imm, administratePractitioners)
+									</dialog>
+									<button onclick="this.previousElementSibling.show()" style="display: block">
+										Edit
+									</button>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+templ T_ImmunizationsForm(patId string, imm *r4.Immunization, administratePractitioners []*r4.Practitioner) {
+	{{
+	formId := "immunization_new"
+	if imm != nil && imm.Id != nil {
+		formId = "immunization_" + *imm.Id
+	}
+	}}
+	<form
+		id={ formId }
+		style="display: flex; flex-direction: column; height: fit-content;"
+		if imm == nil || imm.Id == nil {
+			hx-post={ "/patient/" + patId + "/immunizations/create/" }
+		} else {
+			hx-post={ "/patient/" + patId + "/immunizations/update/" + *imm.Id }
+		}
+		hx-ext="form-json"
+		hx-push-url="false"
+		hx-swap="outerHTML"
+		hx-indicator={ "#" + formId }
+		class="htmx-indicator"
+	>
+		<header
+			potato-drag
+			style="cursor: move; display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;"
+		>
+			<span>
+				if imm == nil {
+					Add New Immunization
+				} else {
+					{ imm.VaccineCode.String() }
+				}
+			</span>
+			<button type="button" onclick="this.closest('dialog').close()">✕</button>
+		</header>
+		<div potato-drag style="cursor: move">
+			<hr class="color-color3"/>
+		</div>
+		<div style="margin-bottom: 8px;">
+			{{
+				status_completed := ""
+				status_error := ""
+				status_notdone := ""
+				reasonStyle := ""
+				vaccineInfoStyle := ""
+				showFlex := "flex: 1; display: grid; grid-template-columns: repeat(auto-fit, 400px); gap:4px; margin-bottom: 8px;"
+				//really awkward repetition of showFlex in templ.JSFuncCall later but templ doesnt let it use var? probably better templ way idk
+				if imm == nil {
+					status_completed = "checked"
+					reasonStyle = "display: none"
+					vaccineInfoStyle = showFlex
+				} else {
+					if imm.Status == "completed" {
+						status_completed = "checked"
+						reasonStyle = "display: none"
+						vaccineInfoStyle = showFlex
+					} else if imm.Status == "entered-in-error" {
+						status_error = "checked"
+						reasonStyle = "display: none"
+						vaccineInfoStyle = "display: none"
+					} else if imm.Status == "not-done" {
+						status_notdone = "checked"
+						reasonStyle = "display: block"
+						vaccineInfoStyle = "display: none"
+					}
+				}
+			}}
+			//on check radio btn for completed/notdone/error, switch what inputs show
+			//would be much more clear with inline js, this seems bad
+			//not sure how though probably my least favorite thing with templ
+			<script>
+				function setImmSectionStyle(formId, reasonStyle, vaccineInfoStyle) {
+				console.log("hi");
+					thisForm = document.getElementById(formId)
+					console.log(thisForm);
+					console.log(thisForm.querySelector(".vaccineInfo"));
+					thisForm.querySelector(".reason").style = reasonStyle;
+					thisForm.querySelector(".vaccineInfo").style = vaccineInfoStyle;
+				}
+			</script>
+			<input
+				type="radio"
+				id={ formId + "given" }
+				name="status"
+				value="completed"
+				{ status_completed }
+				onchange={ templ.JSFuncCall("setImmSectionStyle", formId, "display: none", "flex: 1; display: grid; grid-template-columns: repeat(auto-fit, 400px); gap:4px; margin-bottom: 8px;") }
+			/>
+			<label for={ formId + "given" }>Administered</label>
+			<input
+				type="radio"
+				id={ formId + "error" }
+				name="status"
+				value="entered-in-error"
+				{ status_error }
+				onchange={ templ.JSFuncCall("setImmSectionStyle", formId, "display: none", "display: none") }
+			/>
+			<label for={ formId + "error" }>Entered in error</label>
+			<input
+				type="radio"
+				id={ formId + "notgiven" }
+				name="status"
+				value="not-done"
+				{ status_notdone }
+				onchange={ templ.JSFuncCall("setImmSectionStyle", formId, "display: block", "display: none") }
+			/>
+			<label for={ formId + "notgiven" }>Not done</label>
+		</div>
+		<section class="reason" style={ reasonStyle }>
+			<div>
+				<label for={ formId + "statusreason" } style="display: inline-block; width: 140px;">Reason: </label>
+				@imm.T_StatusReason(test, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "statusreason"})
+			</div>
+		</section>
+		<section class="vaccineInfo" style={ vaccineInfoStyle }>
+			<div>
+				<label for={ formId + "code" } style="display: inline-block; width: 140px;">Immunization: </label>
+				@imm.T_VaccineCode(test, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "code"})
+			</div>
+			<div>
+				<label for={ formId + "occurrence" } style="display: inline-block; width: 140px;">Date Administered: </label>
+				@imm.T_OccurrenceDateTime(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "occurrence"})
+			</div>
+			<div>
+				<label for={ formId + "performer" } style="display: inline-block; width: 140px;">Administered By: </label>
+				{{
+					arr := []r4.FhirResource{}
+					for _, p := range administratePractitioners {
+						arr = append(arr, *p)
+					}
+				}}
+				@imm.T_PerformerActor(arr, 0, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "performer"})
+			</div>
+			// <div>
+			// 	<p>manufacturer need to fix reference</p>
+			// </div>
+			<div>
+				<label for={ formId + "lotnumber" } style="display: inline-block; width: 140px;">Lot Number:</label>
+				@imm.T_LotNumber(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "lotnumber"})
+			</div>
+			<div>
+				<label for={ formId + "dosequantity" } style="display: inline-block; width: 140px;">Dosage:</label>
+				{{
+					mL := "mL"
+					mL2 := "mL2"
+					sys := "http://unitsofmeasure.org"
+					doseUnits := []r4.Coding{
+						r4.Coding{Code: &mL, Display: &mL, System: &sys},
+						r4.Coding{Code: &mL2, Display: &mL2, System: &sys},
+					}
+				}}
+				@imm.T_DoseQuantity(doseUnits, r4.QuantityAttrs{
+					Unit:  templ.Attributes{"style": "display: inline-block; width: 180px;", "id": formId + "dosequantity"},
+					Value: templ.Attributes{"style": "display: inline-block; width: 40px;"},
+				})
+			</div>
+			<div>
+				<label for={ formId + "expirationdate" } style="display: inline-block; width: 140px;">Expiration Date:</label>
+				@imm.T_ExpirationDate(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "expirationdate"})
+			</div>
+			<div>
+				<label for={ formId + "route" } style="display: inline-block; width: 140px;">Route:</label>
+				@imm.T_Route(test, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "route"})
+			</div>
+			<div>
+				<label for={ formId + "bodysite" } style="display: inline-block; width: 140px;">Body Site:</label>
+				@imm.T_Site(test, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "bodysite"})
+			</div>
+			<div>
+				<label for={ formId + "fundingsource" } style="display: inline-block; width: 140px;">Funding Source:</label>
+				@imm.T_FundingSource(test, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": formId + "fundingsource"})
+			</div>
+		</section>
+		<section style="width: 100%;">
+			<label for={ formId + "note" } style="display: block;">Comments:</label>
+			@imm.T_Note(0, templ.Attributes{"style": "width: 600px; max-width: 90%; height: 150px;", "id": formId + "note"})
+		</section>
+		<div>
+			<hr class="color-color3"/>
+		</div>
+		<footer style="display:flex; margin: 0px; padding: 0px;">
+			<button type="submit">Save Changes</button>
+			<button type="reset" onclick="this.closest('dialog').close()">
+				Close
+			</button>
+			if imm != nil && imm.Id != nil {
+				<button type="button" hx-post={ "/patient/" + patId + "/immunizations/delete/" + *imm.Id } hx-target="body" hx-swap="outerHTML">
+					Delete
+				</button>
+			}
+		</footer>
+	</form>
+}
