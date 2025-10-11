@@ -23,7 +23,7 @@ func patient_Medications(w http.ResponseWriter, req *http.Request) {
 }
 
 templ T_Medications(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
-	@patient_Base_Nav(pat, patEverything, TabMedications) {
+	@patient_Base_Nav(pat, patEverything, get_patient_medications) {
 		<p>Medications</p>
 	}
 }

@@ -109,7 +109,7 @@ var codeAndNames = []codeAndName{
 }
 
 templ T_ObservationVitalSigns(pat *r4.Patient, patEverything *r4Client.ResourceGroup, vitalsByTimeAndCode map[string]map[string]r4.Observation) {
-	@patient_Base_Nav(pat, patEverything, TabVitalSigns) {
+	@patient_Base_Nav(pat, patEverything, get_patient_observationVitalSigns) {
 		<h3>Vital Signs</h3>
 		<style>
 		table {
@@ -130,7 +130,7 @@ templ T_ObservationVitalSigns(pat *r4.Patient, patEverything *r4Client.ResourceG
 		}}
 		<form
 			id="vitalsForm"
-			hx-post={ "/patient/" + *pat.Id + "/vitalsigns/create/" }
+			hx-post={ fmt.Sprintf(post_patient_observationVitalSigns, *pat.Id) }
 			hx-target="body"
 			hx-ext="form-json"
 			hx-push-url="false"

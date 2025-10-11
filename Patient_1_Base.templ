@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/PotatoEMR/PotatoEMR/utils"
 	"github.com/PotatoEMR/simple-fhir-client/r4"
 	"github.com/PotatoEMR/simple-fhir-client/r4Client"
@@ -9,7 +10,7 @@ import (
 //all patient specific pages use patient_Base_Nav for patient sidebar
 //and for links to pages specific to the particular patient
 //such as patient allergies, patient demographics, etc
-templ patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, currentTab Tab) {
+templ patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, currentTab string) {
 	@my_Base_Nav() {
 		<div style="height: 100%; display: flex;">
 			<nav
@@ -88,19 +89,32 @@ templ patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, c
 					class="color-color2"
 					style="padding-left: 2px; display: flex; position: relative; border-bottom-width: 2px; border-bottom-style: solid; line-height: 1.2em;"
 				>
-					for tabNum, tabLabel := range tabLabels {
-						if int(currentTab) == tabNum {
+					{{
+						var tabs = []struct {
+							Label string
+							Link  string
+						}{
+							{"Overview", get_patient_overview},
+							{"Patient Info", get_patient_info},
+							{"Allergies", get_patient_allergies},
+							{"Medications", get_patient_medications},
+							{"Immunization History", get_patient_immunizations},
+							{"Vital Signs", get_patient_observationVitalSigns},
+						}
+					}}
+					for _, tab := range tabs {
+						if currentTab == tab.Link {
 							<a
 								class="color-color3"
 								style="margin-top: 2px; margin-bottom: -2px; border-radius: 12px 12px 0 0; border-width: 2px; border-style: solid; border-bottom: 0px; padding: 2px;"
-								href={ "/patient/" + *pat.Id + "/" + tabLinks[tabNum] }
-							>{ tabLabel }</a>
+								href={ fmt.Sprintf(tab.Link, *pat.Id) }
+							>{ tab.Label }</a>
 						} else {
 							<a
 								class="color-color2-hover"
 								style="padding: 4px; padding-top: 6px;"
-								href={ "/patient/" + *pat.Id + "/" + tabLinks[tabNum] }
-							>{ tabLabel }</a>
+								href={ fmt.Sprintf(tab.Link, *pat.Id) }
+							>{ tab.Label }</a>
 						}
 					}
 				</nav>
@@ -116,35 +130,4 @@ templ patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, c
 			</div>
 		</div>
 	}
-}
-
-//list of tabs, each patient page passes currentTab to base patient page
-//so base patient can highlight that tab
-
-type Tab int
-
-const (
-	TabOverview Tab = iota
-	TabPatientInfo
-	TabAllergies
-	TabMedications
-	TabImmunizationHistory
-	TabVitalSigns
-)
-
-var tabLabels = []string{
-	"Overview",
-	"Patient Info",
-	"Allergies",
-	"Medications",
-	"Immunization History",
-	"Vital Signs"}
-
-var tabLinks = []string{
-	"overview",
-	"patientinfo",
-	"allergies",
-	"medications",
-	"immunizations",
-	"vitalsigns",
 }

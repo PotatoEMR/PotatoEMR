@@ -31,7 +31,20 @@ func my_Base_Nav() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\" style=\"height: 100%; margin: 0; padding: 0;\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><meta name=\"htmx-config\" content='{\"includeIndicatorStyles\": false}'><title>PotatoEMR</title><link rel=\"icon\" href=\"data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'&gt;&lt;text y='1em' font-size='80'&gt;🥔&lt;/text&gt;&lt;/svg&gt;\"><link rel=\"stylesheet\" href=\"/static/common.css\"><script defer src=\"/static/htmx.js\"></script><script defer src=\"/static/form-json.js\"></script><link rel=\"stylesheet\" href=\"/static/colors/default_light.css\"><script defer src=\"/static/potatoDrag.js\"></script></head><body style=\"display: flex; flex-direction: column;\"><nav hx-boost=\"true\" id=\"main-nav\" class=\"color-color1\" style=\"display: flex; padding-left: 2px; position: relative; border-bottom-width: 2px; border-bottom-style: solid; line-height: 1.2em;\"><a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/\">PotatoEMR🥔</a> <dialog id=\"search_patient_dialog\" hx-preserve class=\"color-color1 shadow\" style=\"height:50vh; position: absolute; top: 20vh; width: 70vw; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;\"><div style=\"display:flex; flex-direction:column; height: 100%\"><menu potato-drag style=\"cursor: move; display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;\"><span>Patient Search</span> <button onclick=\"this.closest('dialog').close()\">✕</button></menu><hr potato-drag style=\"cursor: move; width: 100%;\" class=\"color-color1\"><section style=\"flex:1; overflow:auto; display:flex; flex-direction:column;\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\" style=\"height: 100%; margin: 0; padding: 0;\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><meta name=\"htmx-config\" content='{\"includeIndicatorStyles\": false}'><title>PotatoEMR</title><link rel=\"icon\" href=\"data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'&gt;&lt;text y='1em' font-size='80'&gt;🥔&lt;/text&gt;&lt;/svg&gt;\"><link rel=\"stylesheet\" href=\"/static/common.css\"><script defer src=\"/static/htmx.js\"></script><script defer src=\"/static/form-json.js\"></script><link rel=\"stylesheet\" href=\"/static/colors/default_light.css\"><script defer src=\"/static/potatoDrag.js\"></script></head><body style=\"display: flex; flex-direction: column;\"><nav hx-boost=\"true\" id=\"main-nav\" class=\"color-color1\" style=\"display: flex; padding-left: 2px; position: relative; border-bottom-width: 2px; border-bottom-style: solid; line-height: 1.2em;\"><a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var2 templ.SafeURL
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinURLErrs(get_index)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `My_1_Base.templ`, Line: 27, Col: 71}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\">PotatoEMR🥔</a> <dialog id=\"search_patient_dialog\" hx-preserve class=\"color-color1 shadow\" style=\"height:50vh; position: absolute; top: 20vh; width: 70vw; padding: 4px; border-width: 2px; border-style: solid; border-radius: 8px; z-index: 99;\"><div style=\"display:flex; flex-direction:column; height: 100%\"><menu potato-drag style=\"cursor: move; display:flex; justify-content:space-between; align-items:center; margin: 0px; padding: 0px;\"><span>Patient Search</span> <button onclick=\"this.closest('dialog').close()\">✕</button></menu><hr potato-drag style=\"cursor: move; width: 100%;\" class=\"color-color1\"><section style=\"flex:1; overflow:auto; display:flex; flex-direction:column;\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -39,7 +52,59 @@ func my_Base_Nav() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section></div></dialog> <span class=\"color-color1-hover\" style=\"padding: 4px; cursor: pointer; text-decoration: underline;\" onclick=\"this.previousElementSibling.show()\">Search Patient</span> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/registerpatient\">Register Patient</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/calendar\">Calendar</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/patientlists\">Patient Lists</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"/settings\">Settings</a></nav><main id=\"main-content\" class=\"color-color3\" style=\"flex: 1; overflow: auto;\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section></div></dialog> <span class=\"color-color1-hover\" style=\"padding: 4px; cursor: pointer; text-decoration: underline;\" onclick=\"this.previousElementSibling.show()\">Search Patient</span> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var3 templ.SafeURL
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinURLErrs(get_registerPatient)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `My_1_Base.templ`, Line: 47, Col: 81}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\">Register Patient</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var4 templ.SafeURL
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(get_calendar)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `My_1_Base.templ`, Line: 48, Col: 74}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\">Calendar</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var5 templ.SafeURL
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(get_patientLists)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `My_1_Base.templ`, Line: 49, Col: 78}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">Patient Lists</a> <a class=\"color-color1-hover\" style=\"padding: 4px\" href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var6 templ.SafeURL
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(get_settings)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `My_1_Base.templ`, Line: 50, Col: 74}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\">Settings</a></nav><main id=\"main-content\" class=\"color-color3 htmx-indicator\" style=\"flex: 1; overflow: auto;\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -47,7 +112,7 @@ func my_Base_Nav() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</main></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</main></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

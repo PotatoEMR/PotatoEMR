@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"fmt"
 	utils "github.com/PotatoEMR/PotatoEMR/utils"
 	r4 "github.com/PotatoEMR/simple-fhir-client/r4"
 	r4Client "github.com/PotatoEMR/simple-fhir-client/r4Client"
@@ -30,7 +31,7 @@ func my_SearchPatient(w http.ResponseWriter, req *http.Request) {
 templ T_SearchPatient() {
 	<form
 		id="search-patient-form"
-		hx-post="/searchpatient"
+		hx-post={ post_searchPatient }
 		hx-target="#search-results"
 		hx-indicator="#search-patient-container"
 		hx-sync="this:replace"
@@ -70,7 +71,11 @@ templ T_SearchPatientResults(resultPatientList []*r4.Patient) {
 	} else {
 		<div style="display: flex; flex-direction: column; gap: 4px;">
 			for _, pat := range resultPatientList {
-				<a onclick="this.closest('dialog').close()" href={ "/patient/" + *pat.Id + "/overview/" }>
+				<a
+					hx-indicator="#main-content"
+					onclick="this.closest('dialog').close()"
+					href={ fmt.Sprintf(get_patient_overview, *pat.Id) }
+				>
 					<div style="display: flex; gap: 4px;">
 						{{ photoSrc := utils.GetPatientPhotoSrc(pat) }}
 						if photoSrc == nil {

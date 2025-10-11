@@ -67,10 +67,11 @@ func patient_AllergiesUpdate(w http.ResponseWriter, req *http.Request) {
 	a.Reaction = []r4.AllergyIntoleranceReaction{}
 	for _, v := range data.Reaction {
 		a.Reaction = append(a.Reaction, v)
+		//this could crash??
 		fmt.Println(*v.Manifestation[0].Coding[0].Display)
 	}
 	a.Criticality = data.Criticality
-	a.Note = []r4.Annotation{data.Note[0]}
+	a.Note = data.Note
 
 	_, err := client.UpdateAllergyIntolerance(a)
 	fmt.Println("update error", err)
@@ -86,7 +87,7 @@ func patient_AllergiesDelete(w http.ResponseWriter, req *http.Request) {
 }
 
 templ T_Allergies(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
-	@patient_Base_Nav(pat, patEverything, TabAllergies) {
+	@patient_Base_Nav(pat, patEverything, get_patient_allergies) {
 		<div id="allergy-page" class="color-color3" style="margin: 4px; padding: 4px;">
 			{ children... }
 			<div style="display: flex; align-items: center; gap: 1em;">
@@ -171,9 +172,9 @@ templ T_AllergyForm(patId string, allergy *r4.AllergyIntolerance) {
 		id={ formId }
 		style="display: flex; flex-direction: column; height: 100%;"
 		if allergy == nil || allergy.Id == nil {
-			hx-post={ "/patient/" + patId + "/allergies/create/" }
+			hx-post={ fmt.Sprintf(post_patient_allergiesCreate, patId) }
 		} else {
-			hx-post={ "/patient/" + patId + "/allergies/update/" + *allergy.Id }
+			hx-post={ fmt.Sprintf(post_patient_allergiesUpdate, patId, *allergy.Id) }
 		}
 		hx-ext="form-json"
 		hx-push-url="false"
@@ -238,7 +239,7 @@ templ T_AllergyForm(patId string, allergy *r4.AllergyIntolerance) {
 				Close
 			</button>
 			if allergy != nil && allergy.Id != nil {
-				<button type="button" hx-post={ "/patient/" + patId + "/allergies/delete/" + *allergy.Id } hx-target="body" hx-swap="outerHTML">
+				<button type="button" hx-post={ fmt.Sprintf(post_patient_allergiesDelete, patId, *allergy.Id) } hx-target="body" hx-swap="outerHTML">
 					Delete
 				</button>
 			}

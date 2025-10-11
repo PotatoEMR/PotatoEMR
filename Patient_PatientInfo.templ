@@ -23,7 +23,7 @@ func patient_PatientInfo(w http.ResponseWriter, req *http.Request) {
 }
 
 templ T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
-	@patient_Base_Nav(pat, patEverything, TabPatientInfo) {
+	@patient_Base_Nav(pat, patEverything, get_patient_info) {
 		<h3>Patient Info</h3>
 		<form>
 			<div>

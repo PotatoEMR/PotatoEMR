@@ -24,7 +24,7 @@ templ my_Base_Nav() {
 				class="color-color1"
 				style="display: flex; padding-left: 2px; position: relative; border-bottom-width: 2px; border-bottom-style: solid; line-height: 1.2em;"
 			>
-				<a class="color-color1-hover" style="padding: 4px" href="/">PotatoEMR🥔</a>
+				<a class="color-color1-hover" style="padding: 4px" href={ get_index }>PotatoEMR🥔</a>
 				<dialog
 					id="search_patient_dialog"
 					hx-preserve
@@ -44,12 +44,12 @@ templ my_Base_Nav() {
 					</div>
 				</dialog>
 				<span class="color-color1-hover" style="padding: 4px; cursor: pointer; text-decoration: underline;" onclick="this.previousElementSibling.show()">Search Patient</span>
-				<a class="color-color1-hover" style="padding: 4px" href="/registerpatient">Register Patient</a>
-				<a class="color-color1-hover" style="padding: 4px" href="/calendar">Calendar</a>
-				<a class="color-color1-hover" style="padding: 4px" href="/patientlists">Patient Lists</a>
-				<a class="color-color1-hover" style="padding: 4px" href="/settings">Settings</a>
+				<a class="color-color1-hover" style="padding: 4px" href={ get_registerPatient }>Register Patient</a>
+				<a class="color-color1-hover" style="padding: 4px" href={ get_calendar }>Calendar</a>
+				<a class="color-color1-hover" style="padding: 4px" href={ get_patientLists }>Patient Lists</a>
+				<a class="color-color1-hover" style="padding: 4px" href={ get_settings }>Settings</a>
 			</nav>
-			<main id="main-content" class="color-color3" style="flex: 1; overflow: auto;">
+			<main id="main-content" class="color-color3 htmx-indicator" style="flex: 1; overflow: auto;">
 				{ children... }
 			</main>
 		</body>

@@ -12,6 +12,11 @@ import (
 
 func patient_Overview(w http.ResponseWriter, req *http.Request) {
 	patId := req.PathValue("patId")
+	patIdpatient_Overview(patId, w, req)
+}
+
+// split out so other handler funcs (eg registerPatient) can call this with a pat id
+func patIdpatient_Overview(patId string, w http.ResponseWriter, req *http.Request) {
 	fmt.Println("patId is", patId)
 	patEverything, err := client.PatientEverythingGrouped(patId)
 
@@ -51,7 +56,7 @@ templ OverviewCard(cardName, color string) {
 
 // patient page idk
 templ T_Overview(pat *r4.Patient, patEverything *r4Client.ResourceGroup, patCareTeams []*r4.CareTeam) {
-	@patient_Base_Nav(pat, patEverything, TabOverview) {
+	@patient_Base_Nav(pat, patEverything, get_patient_overview) {
 		<h3>Overview</h3>
 		//would really prefer masonry layout https://masonry.desandro.com/ but no css way, needs js for layout
 		<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap:10px;">

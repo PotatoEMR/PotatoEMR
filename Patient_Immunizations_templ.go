@@ -334,7 +334,7 @@ func T_Immunizations(pat *r4.Patient, patEverything *r4Client.ResourceGroup, vac
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = patient_Base_Nav(pat, patEverything, TabImmunizationHistory).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = patient_Base_Nav(pat, patEverything, get_patient_immunizations).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -391,9 +391,9 @@ func T_ImmunizationsForm(patId string, imm *r4.Immunization, administratePractit
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var10 string
-			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs("/patient/" + patId + "/immunizations/create/")
+			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf(post_patient_immunizationsCreate, patId))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_Immunizations.templ`, Line: 247, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_Immunizations.templ`, Line: 247, Col: 65}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -409,9 +409,9 @@ func T_ImmunizationsForm(patId string, imm *r4.Immunization, administratePractit
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var11 string
-			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs("/patient/" + patId + "/immunizations/update/" + *imm.Id)
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf(post_patient_immunizationsUpdate, patId, *imm.Id))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_Immunizations.templ`, Line: 249, Col: 69}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_Immunizations.templ`, Line: 249, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -937,9 +937,9 @@ func T_ImmunizationsForm(patId string, imm *r4.Immunization, administratePractit
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var39 string
-			templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs("/patient/" + patId + "/immunizations/delete/" + *imm.Id)
+			templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf(post_patient_immunizationsDelete, patId, *imm.Id))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_Immunizations.templ`, Line: 421, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_Immunizations.templ`, Line: 421, Col: 97}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 			if templ_7745c5c3_Err != nil {

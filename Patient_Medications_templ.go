@@ -69,7 +69,7 @@ func T_Medications(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = patient_Base_Nav(pat, patEverything, TabMedications).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = patient_Base_Nav(pat, patEverything, get_patient_medications).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -9,6 +9,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"fmt"
 	"github.com/PotatoEMR/PotatoEMR/utils"
 	"github.com/PotatoEMR/simple-fhir-client/r4"
 	"github.com/PotatoEMR/simple-fhir-client/r4Client"
@@ -17,7 +18,7 @@ import (
 // all patient specific pages use patient_Base_Nav for patient sidebar
 // and for links to pages specific to the particular patient
 // such as patient allergies, patient demographics, etc
-func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, currentTab Tab) templ.Component {
+func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, currentTab string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -68,7 +69,7 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(*photoSrc)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 29, Col: 25}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 30, Col: 25}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -86,7 +87,7 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(pat.String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 31, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 32, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -109,7 +110,7 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs((*pat.BirthDate).Format(r4.FhirDateFormat))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 35, Col: 52}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 36, Col: 52}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -133,7 +134,7 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(*pat.Id)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 40, Col: 22}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 41, Col: 22}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -156,7 +157,7 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(condition.Code.String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 45, Col: 34}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 46, Col: 34}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -179,7 +180,7 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(allergy.Code.String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 51, Col: 32}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 52, Col: 32}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
@@ -202,7 +203,7 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 				var templ_7745c5c3_Var9 string
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(med.Code.String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 57, Col: 28}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 58, Col: 28}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
@@ -225,7 +226,7 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 				var templ_7745c5c3_Var10 string
 				templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(obs.Code.String() + ": " + utils.ObservationValueString(obs))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 63, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 64, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 				if templ_7745c5c3_Err != nil {
@@ -254,7 +255,7 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 						var templ_7745c5c3_Var11 string
 						templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(*content.Attachment.Title)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 72, Col: 69}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 73, Col: 69}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 						if templ_7745c5c3_Err != nil {
@@ -272,7 +273,7 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 					var templ_7745c5c3_Var12 string
 					templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs((*dr).Author[0].String())
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 74, Col: 67}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 75, Col: 67}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 					if templ_7745c5c3_Err != nil {
@@ -290,7 +291,7 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 						var templ_7745c5c3_Var13 string
 						templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs((*content.Attachment.Creation).Format("2006-01-02"))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 76, Col: 95}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 77, Col: 95}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 						if templ_7745c5c3_Err != nil {
@@ -311,16 +312,28 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			for tabNum, tabLabel := range tabLabels {
-				if int(currentTab) == tabNum {
+
+			var tabs = []struct {
+				Label string
+				Link  string
+			}{
+				{"Overview", get_patient_overview},
+				{"Patient Info", get_patient_info},
+				{"Allergies", get_patient_allergies},
+				{"Medications", get_patient_medications},
+				{"Immunization History", get_patient_immunizations},
+				{"Vital Signs", get_patient_observationVitalSigns},
+			}
+			for _, tab := range tabs {
+				if currentTab == tab.Link {
 					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "<a class=\"color-color3\" style=\"margin-top: 2px; margin-bottom: -2px; border-radius: 12px 12px 0 0; border-width: 2px; border-style: solid; border-bottom: 0px; padding: 2px;\" href=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var14 templ.SafeURL
-					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs("/patient/" + *pat.Id + "/" + tabLinks[tabNum])
+					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(fmt.Sprintf(tab.Link, *pat.Id))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 96, Col: 61}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 110, Col: 45}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 					if templ_7745c5c3_Err != nil {
@@ -331,9 +344,9 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var15 string
-					templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(tabLabel)
+					templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(tab.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 97, Col: 18}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 111, Col: 19}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 					if templ_7745c5c3_Err != nil {
@@ -349,9 +362,9 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var16 templ.SafeURL
-					templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs("/patient/" + *pat.Id + "/" + tabLinks[tabNum])
+					templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(fmt.Sprintf(tab.Link, *pat.Id))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 102, Col: 61}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 116, Col: 45}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 					if templ_7745c5c3_Err != nil {
@@ -362,9 +375,9 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var17 string
-					templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(tabLabel)
+					templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(tab.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 103, Col: 18}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_1_Base.templ`, Line: 117, Col: 19}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 					if templ_7745c5c3_Err != nil {
@@ -396,37 +409,6 @@ func patient_Base_Nav(pat *r4.Patient, patEverything *r4Client.ResourceGroup, cu
 		}
 		return nil
 	})
-}
-
-//list of tabs, each patient page passes currentTab to base patient page
-//so base patient can highlight that tab
-
-type Tab int
-
-const (
-	TabOverview Tab = iota
-	TabPatientInfo
-	TabAllergies
-	TabMedications
-	TabImmunizationHistory
-	TabVitalSigns
-)
-
-var tabLabels = []string{
-	"Overview",
-	"Patient Info",
-	"Allergies",
-	"Medications",
-	"Immunization History",
-	"Vital Signs"}
-
-var tabLinks = []string{
-	"overview",
-	"patientinfo",
-	"allergies",
-	"medications",
-	"immunizations",
-	"vitalsigns",
 }
 
 var _ = templruntime.GeneratedTemplate

@@ -164,9 +164,9 @@ func T_ObservationVitalSigns(pat *r4.Patient, patEverything *r4Client.ResourceGr
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
-			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs("/patient/" + *pat.Id + "/vitalsigns/create/")
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf(post_patient_observationVitalSigns, *pat.Id))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_ObservationVitalSigns.templ`, Line: 133, Col: 58}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_ObservationVitalSigns.templ`, Line: 133, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -281,7 +281,7 @@ func T_ObservationVitalSigns(pat *r4.Patient, patEverything *r4Client.ResourceGr
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = patient_Base_Nav(pat, patEverything, TabVitalSigns).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = patient_Base_Nav(pat, patEverything, get_patient_observationVitalSigns).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
