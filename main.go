@@ -39,16 +39,17 @@ func (m *NamedServeMux) namedHandleFunc(pattern string, handler func(http.Respon
 var get_index, post_index, post_searchPatient, get_registerPatient, post_registerPatient, get_calendar, get_patientLists, get_settings string
 var get_patient_allergies, post_patient_allergiesCreate, post_patient_allergiesUpdate, post_patient_allergiesDelete string
 var get_patient, get_patient_overview string
-var get_patient_info string
+var get_patient_info, post_patient_info string
 var get_patient_immunizations, post_patient_immunizationsCreate, post_patient_immunizationsUpdate, post_patient_immunizationsDelete string
 var get_patient_medications string
 var get_patient_observationVitalSigns, post_patient_observationVitalSigns string
 
 var client *r4Client.FhirClient
 
+// templ generate; go run . -port=8123 -fhirServer=https://hapi.fhir.org/baseR4
 func main() {
-	port := flag.String("port", "8000", "will run potatoemr on 127.0.0.1:<port>")
-	fhirServer := flag.String("fhirServer", "r4.smarthealthit.org/", "will run potatoemr on 127.0.0.1:<port>")
+	port := flag.String("port", "8000", "run potatoemr on 127.0.0.1:<port>")
+	fhirServer := flag.String("fhirServer", "r4.smarthealthit.org/", "connect to FHIR server at <fhirServer>")
 	flag.Parse()
 
 	client = r4Client.New(*fhirServer)
@@ -76,6 +77,7 @@ func main() {
 	get_patient_overview = mux.namedHandleFunc("GET /patient/{patId}/overview/", patient_Overview)
 
 	get_patient_info = mux.namedHandleFunc("GET /patient/{patId}/patientinfo/", patient_PatientInfo)
+	post_patient_info = mux.namedHandleFunc("POST /patient/{patId}/patientinfo/", patient_PatientInfo_update)
 
 	get_patient_immunizations = mux.namedHandleFunc("GET /patient/{patId}/immunizations/", patient_Immunizations)
 	post_patient_immunizationsCreate = mux.namedHandleFunc("POST /patient/{patId}/immunizations/create/", patient_ImmunizationsCreate)
@@ -87,6 +89,6 @@ func main() {
 	get_patient_observationVitalSigns = mux.namedHandleFunc("GET /patient/{patId}/vitalsigns/", patient_ObservationVitalSigns)
 	post_patient_observationVitalSigns = mux.namedHandleFunc("POST /patient/{patId}/vitalsigns/create/", patient_ObservationVitalSignsCreate)
 
-	fmt.Println("🥔🥔🥔 PotatoEMR running on http://127.0.0.1:" + *port)
+	fmt.Println("🥔🥔🥔 PotatoEMR\nusing FHIR server " + client.BaseUrl + "\nrunning on http://127.0.0.1:" + *port)
 	http.ListenAndServe(":"+*port, mux)
 }

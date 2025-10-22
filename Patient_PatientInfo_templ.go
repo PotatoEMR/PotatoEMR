@@ -9,7 +9,9 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	r4 "github.com/PotatoEMR/simple-fhir-client/r4"
 	r4Client "github.com/PotatoEMR/simple-fhir-client/r4Client"
 
@@ -20,6 +22,9 @@ func patient_PatientInfo(w http.ResponseWriter, req *http.Request) {
 	patId := req.PathValue("patId")
 	patEverything, err := client.PatientEverythingGrouped(patId)
 
+	// j, _ := json.MarshalIndent(patEverything.Patients[0], "", "  ")
+	// fmt.Println(string(j))
+
 	if err != nil {
 		ErrorMsg(err).Render(req.Context(), w)
 	} else if len(patEverything.Patients) != 1 {
@@ -28,6 +33,32 @@ func patient_PatientInfo(w http.ResponseWriter, req *http.Request) {
 		pat := patEverything.Patients[0]
 		T_PatientInfo(pat, patEverything).Render(req.Context(), w)
 	}
+}
+
+func patient_PatientInfo_update(w http.ResponseWriter, req *http.Request) {
+	var data r4.Patient
+	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer req.Body.Close()
+
+	// patId := req.PathValue("patId")
+	// oldPat, err := client.ReadPatient(patId)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusBadRequest)
+	// 	return
+	// }
+
+	// oldPat.Extension = r4.MergeExtension(oldPat.Extension, data.Extension)
+
+	// pretty, err := json.MarshalIndent(oldPat, "", "  ")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println(string(pretty))
+
+	patient_PatientInfo(w, req)
 }
 
 func T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ.Component {
@@ -63,53 +94,66 @@ func T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h3>Patient Info</h3><form><div><span style=\"display: inline-block; width: 200px;\">MRN: </span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<p>hi</p><h3>Patient Info</h3><form id=\"patInfoForm\" hx-post=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var3 string
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf(post_patient_info, *pat.Id))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_PatientInfo.templ`, Line: 62, Col: 52}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" hx-target=\"body\" hx-ext=\"form-json\" hx-push-url=\"false\" hx-indicator=\"#patInfoForm\" class=\"htmx-indicator\"><div><span style=\"display: inline-block; width: 200px;\">MRN: </span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if pat != nil && len(pat.Identifier) != 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<span style=\"display: inline-block; width: 220px;\" id=\"mrn\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var3 string
-				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(pat.Identifier[0].String())
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_PatientInfo.templ`, Line: 33, Col: 93}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</span>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			} else if pat.Id != nil {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<span style=\"display: inline-block; width: 220px;\" id=\"mrn\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<span style=\"display: inline-block; width: 220px;\" id=\"mrn\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var4 string
-				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(*pat.Id)
+				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(pat.Identifier[0].String())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_PatientInfo.templ`, Line: 35, Col: 74}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_PatientInfo.templ`, Line: 73, Col: 93}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</span>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</span>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else if pat.Id != nil {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<span style=\"display: inline-block; width: 220px;\" id=\"mrn\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var5 string
+				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(*pat.Id)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `Patient_PatientInfo.templ`, Line: 75, Col: 74}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<span style=\"display: inline-block; width: 220px;\" id=\"mrn\">N/A</span>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<span style=\"display: inline-block; width: 220px;\" id=\"mrn\">N/A</span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div><div><label for=\"birthdate\" style=\"display: inline-block; width: 200px;\">Birthday: </label>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><div><label for=\"birthdate\" style=\"display: inline-block; width: 200px;\">Birthday: </label>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -117,7 +161,7 @@ func T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><div><label for=\"gender\" style=\"display: inline-block; width: 200px;\">Gender: </label>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><div><label for=\"gender\" style=\"display: inline-block; width: 200px;\">Gender: </label>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -125,7 +169,23 @@ func T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><p>race</p><p>ethnicity</p><div><label for=\"telecom\" style=\"display: inline-block; width: 200px;\">Patient Phone Number: </label>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div><div><label for=\"race\" style=\"display: inline-block; width: 200px;\">Race: </label>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = r4.T_ExtCoding(templ.Attributes{"style": "display: inline-block;", "id": "race"}, vs_race, pat.Extension, []string{"http://hl7.org/fhir/us/core/StructureDefinition/us-core-race", "ombCategory"}).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div><div><label for=\"ethnicity\" style=\"display: inline-block; width: 200px;\">Ethnicity: </label>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = r4.T_ExtCoding(templ.Attributes{"style": "display: inline-block;", "id": "ethnicity"}, vs_ethnicity, pat.Extension, []string{"http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity", "ombCategory"}).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div><div><label for=\"telecom\" style=\"display: inline-block; width: 200px;\">Patient Phone Number: </label>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -133,7 +193,7 @@ func T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div><div><label for=\"contact\" style=\"display: inline-block; width: 200px;\">Contact Phone Number: </label>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div><div><label for=\"contact\" style=\"display: inline-block; width: 200px;\">Contact Phone Number: </label>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -141,7 +201,7 @@ func T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div></form>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</div><button type=\"submit\">Update Patient Info</button></form>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -153,6 +213,72 @@ func T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) templ
 		}
 		return nil
 	})
+}
+
+var ethnicity_system = "urn:oid:2.16.840.1.113883.6.238"
+
+var ethnicity_code1 = "2135-2"
+var ethnicity_display1 = "Hispanic or Latino"
+
+var ethnicity_code2 = "2186-5"
+var ethnicity_display2 = "Not Hispanic or Latino"
+
+var vs_ethnicity = []r4.Coding{
+	{
+		System:  &ethnicity_system,
+		Code:    &ethnicity_code1,
+		Display: &ethnicity_display1,
+	},
+	{
+		System:  &ethnicity_system,
+		Code:    &ethnicity_code2,
+		Display: &ethnicity_display2,
+	},
+}
+
+var race_system = "urn:oid:2.16.840.1.113883.6.238"
+
+var race_code1 = "1002-5"
+var race_display1 = "American Indian or Alaska Native"
+
+var race_code2 = "2028-9"
+var race_display2 = "Asian"
+
+var race_code3 = "2054-5"
+var race_display3 = "Black or African American"
+
+var race_code4 = "2076-8"
+var race_display4 = "Native Hawaiian or Other Pacific Islander"
+
+var race_code5 = "2106-3"
+var race_display5 = "White"
+
+var vs_race = []r4.Coding{
+	{
+		System:  &race_system,
+		Code:    &race_code1,
+		Display: &race_display1,
+	},
+	{
+		System:  &race_system,
+		Code:    &race_code2,
+		Display: &race_display2,
+	},
+	{
+		System:  &race_system,
+		Code:    &race_code3,
+		Display: &race_display3,
+	},
+	{
+		System:  &race_system,
+		Code:    &race_code4,
+		Display: &race_display4,
+	},
+	{
+		System:  &race_system,
+		Code:    &race_code5,
+		Display: &race_display5,
+	},
 }
 
 var _ = templruntime.GeneratedTemplate

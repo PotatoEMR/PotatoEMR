@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	r4 "github.com/PotatoEMR/simple-fhir-client/r4"
 	r4Client "github.com/PotatoEMR/simple-fhir-client/r4Client"
 
@@ -11,6 +13,9 @@ import (
 func patient_PatientInfo(w http.ResponseWriter, req *http.Request) {
 	patId := req.PathValue("patId")
 	patEverything, err := client.PatientEverythingGrouped(patId)
+
+	// j, _ := json.MarshalIndent(patEverything.Patients[0], "", "  ")
+	// fmt.Println(string(j))
 
 	if err != nil {
 		ErrorMsg(err).Render(req.Context(), w)
@@ -22,10 +27,45 @@ func patient_PatientInfo(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func patient_PatientInfo_update(w http.ResponseWriter, req *http.Request) {
+	var data r4.Patient
+	if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer req.Body.Close()
+
+	// patId := req.PathValue("patId")
+	// oldPat, err := client.ReadPatient(patId)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusBadRequest)
+	// 	return
+	// }
+
+	// oldPat.Extension = r4.MergeExtension(oldPat.Extension, data.Extension)
+
+	// pretty, err := json.MarshalIndent(oldPat, "", "  ")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println(string(pretty))
+
+	patient_PatientInfo(w, req)
+}
+
 templ T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
 	@patient_Base_Nav(pat, patEverything, get_patient_info) {
+		<p>hi</p>
 		<h3>Patient Info</h3>
-		<form>
+		<form
+			id="patInfoForm"
+			hx-post={ fmt.Sprintf(post_patient_info, *pat.Id) }
+			hx-target="body"
+			hx-ext="form-json"
+			hx-push-url="false"
+			hx-indicator="#patInfoForm"
+			class="htmx-indicator"
+		>
 			<div>
 				<span style="display: inline-block; width: 200px;">MRN: </span>
 				//identifier might be business id but idk if dont have identifier maybe show pat.id
@@ -45,8 +85,14 @@ templ T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
 				<label for="gender" style="display: inline-block; width: 200px;">Gender: </label>
 				@pat.T_Gender(templ.Attributes{"style": "display: inline-block; width: 220px;", "id": "gender"})
 			</div>
-			<p>race</p>
-			<p>ethnicity</p>
+			<div>
+				<label for="race" style="display: inline-block; width: 200px;">Race: </label>
+				@r4.T_ExtCoding(templ.Attributes{"style": "display: inline-block;", "id": "race"}, vs_race, pat.Extension, []string{"http://hl7.org/fhir/us/core/StructureDefinition/us-core-race", "ombCategory"})
+			</div>
+			<div>
+				<label for="ethnicity" style="display: inline-block; width: 200px;">Ethnicity: </label>
+				@r4.T_ExtCoding(templ.Attributes{"style": "display: inline-block;", "id": "ethnicity"}, vs_ethnicity, pat.Extension, []string{"http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity", "ombCategory"})
+			</div>
 			<div>
 				<label for="telecom" style="display: inline-block; width: 200px;">Patient Phone Number: </label>
 				@pat.T_Telecom(0, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": "telecom"})
@@ -55,6 +101,73 @@ templ T_PatientInfo(pat *r4.Patient, patEverything *r4Client.ResourceGroup) {
 				<label for="contact" style="display: inline-block; width: 200px;">Contact Phone Number: </label>
 				@pat.T_ContactTelecom(0, 0, templ.Attributes{"style": "display: inline-block; width: 220px;", "id": "contact"})
 			</div>
+			<button type="submit">Update Patient Info</button>
 		</form>
 	}
+}
+
+var ethnicity_system = "urn:oid:2.16.840.1.113883.6.238"
+
+var ethnicity_code1 = "2135-2"
+var ethnicity_display1 = "Hispanic or Latino"
+
+var ethnicity_code2 = "2186-5"
+var ethnicity_display2 = "Not Hispanic or Latino"
+
+var vs_ethnicity = []r4.Coding{
+	{
+		System:  &ethnicity_system,
+		Code:    &ethnicity_code1,
+		Display: &ethnicity_display1,
+	},
+	{
+		System:  &ethnicity_system,
+		Code:    &ethnicity_code2,
+		Display: &ethnicity_display2,
+	},
+}
+
+var race_system = "urn:oid:2.16.840.1.113883.6.238"
+
+var race_code1 = "1002-5"
+var race_display1 = "American Indian or Alaska Native"
+
+var race_code2 = "2028-9"
+var race_display2 = "Asian"
+
+var race_code3 = "2054-5"
+var race_display3 = "Black or African American"
+
+var race_code4 = "2076-8"
+var race_display4 = "Native Hawaiian or Other Pacific Islander"
+
+var race_code5 = "2106-3"
+var race_display5 = "White"
+
+var vs_race = []r4.Coding{
+	{
+		System:  &race_system,
+		Code:    &race_code1,
+		Display: &race_display1,
+	},
+	{
+		System:  &race_system,
+		Code:    &race_code2,
+		Display: &race_display2,
+	},
+	{
+		System:  &race_system,
+		Code:    &race_code3,
+		Display: &race_display3,
+	},
+	{
+		System:  &race_system,
+		Code:    &race_code4,
+		Display: &race_display4,
+	},
+	{
+		System:  &race_system,
+		Code:    &race_code5,
+		Display: &race_display5,
+	},
 }
