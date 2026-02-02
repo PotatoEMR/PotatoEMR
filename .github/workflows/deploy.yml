@@ -9,6 +9,7 @@ jobs:
     deploy:
         name: Deploy to Cloudflare Pages
         runs-on: ubuntu-latest
+        environment: LustreDeploy
         permissions:
             contents: read
             deployments: write
