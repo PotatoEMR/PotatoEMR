@@ -269,117 +269,138 @@ fn set_search_visible(model: Model, visible: Bool) {
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  h.div([a.class("w-full h-full bg-slate-900 text-white")], [
-    h.nav([a.class("flex justify-between items-center p-2 bg-slate-800")], [
-      h.ul([a.class("flex space-x-4")], [
-        h.input([
-          a.placeholder("search name"),
-          event.on_focus(UserFocusedSearch),
-          event.on_blur(UserBlurredSearch),
-          event.debounce(event.on_input(UserSearchedPatient), 200),
+  h.div([a.class("w-full min-h-screen flex flex-col bg-slate-900 text-white")], [
+    h.nav(
+      [
+        a.class(
+          "flex justify-between p-2 bg-slate-800 border-b border-slate-700",
+        ),
+      ],
+      [
+        h.ul([a.class("flex space-x-4")], [
+          h.li([a.class("relative")], [
+            h.input([
+              a.class("border border-slate-700"),
+              a.placeholder("search name"),
+              event.on_focus(UserFocusedSearch),
+              event.on_blur(UserBlurredSearch),
+              event.debounce(event.on_input(UserSearchedPatient), 200),
+            ]),
+            case model.search.visible {
+              False -> element.none()
+              True ->
+                h.div(
+                  [
+                    a.class(
+                      "absolute top-full left-0 bg-zinc-800 w-lg h-80 overflow-auto z-50",
+                    ),
+                    event.prevent_default(event.on_mouse_down(UserFocusedSearch)),
+                  ],
+                  case model.search.results {
+                    PatientSearchResultsErrMsg(err_msg:) -> [
+                      h.p([a.class("red-300")], [h.text(err_msg)]),
+                    ]
+                    PatientSearchResultsLoadingMsg -> [h.text("loading...")]
+                    PatientSearchResultsEmptyMsg -> [h.text("empty")]
+                    PatientSearchResultsPats(pats:) ->
+                      case pats {
+                        [] -> [h.p([], [h.text("no patients found")])]
+                        pats ->
+                          list.map(pats, fn(pat) {
+                            h.p([], [
+                              case pat.id {
+                                None -> element.none()
+                                Some(id) ->
+                                  view_header_link(
+                                    current: model.route,
+                                    to: RoutePatient(id, PatientOverview),
+                                    label: utils.humannames_to_single_name_string(
+                                      pat.name,
+                                    ),
+                                  )
+                              },
+                            ])
+                          })
+                      }
+                  },
+                )
+            },
+          ]),
+          view_header_link(
+            current: model.route,
+            to: RouteNoId(Index),
+            label: "Home",
+          ),
+          view_header_link(
+            current: model.route,
+            to: RouteNoId(Posts),
+            label: "Posts",
+          ),
+          view_header_link(
+            current: model.route,
+            to: RouteNoId(About),
+            label: "About",
+          ),
         ]),
-        view_header_link(
-          current: model.route,
-          to: RouteNoId(Index),
-          label: "Home",
-        ),
-        view_header_link(
-          current: model.route,
-          to: RouteNoId(Posts),
-          label: "Posts",
-        ),
-        view_header_link(
-          current: model.route,
-          to: RouteNoId(About),
-          label: "About",
-        ),
-      ]),
-    ]),
-    case model.search.visible {
-      False -> element.none()
-      True ->
-        h.div(
-          [
-            a.class("absolute bg-zinc-800 w-lg h-80 overflow-auto"),
-            event.prevent_default(event.on_mouse_down(UserFocusedSearch)),
-          ],
-          case model.search.results {
-            PatientSearchResultsErrMsg(err_msg:) -> [
-              h.p([a.class("red-300")], [h.text(err_msg)]),
-            ]
-            PatientSearchResultsLoadingMsg -> [h.text("loading...")]
-            PatientSearchResultsEmptyMsg -> [h.text("empty")]
-            PatientSearchResultsPats(pats:) ->
-              case pats {
-                [] -> [h.p([], [h.text("no patients found")])]
-                pats ->
-                  list.map(pats, fn(pat) {
-                    h.p([], [
-                      case pat.id {
-                        None -> element.none()
-                        Some(id) ->
-                          view_header_link(
-                            current: model.route,
-                            to: RoutePatient(id, PatientOverview),
-                            label: utils.humannames_to_single_name_string(
-                              pat.name,
-                            ),
-                          )
-                      },
-                    ])
-                  })
-              }
-          },
-        )
+      ],
+    ),
+    case model.pat_id {
+      None -> view_main(model)
+      Some(pat_id) ->
+        h.div([a.class("flex flex-1")], [
+          h.nav(
+            [
+              a.class("w-48 bg-slate-800 border-r border-slate-700"),
+            ],
+            [h.text("pat hi")],
+          ),
+          h.div([a.class("flex-1")], [
+            h.ul(
+              [
+                a.class(
+                  "p-2 flex space-x-4 bg-slate-800 border-b border-slate-700",
+                ),
+              ],
+              [
+                #(PatientOverview, "Overview"),
+                #(PatientAllergies, "Allergies"),
+                #(PatientMedications, "Medications"),
+                #(PatientVitals, "Vitals"),
+              ]
+                |> list.map(fn(link) {
+                  view_header_link(
+                    current: model.route,
+                    to: RoutePatient(pat_id, link.0),
+                    label: link.1,
+                  )
+                }),
+            ),
+            view_main(model),
+          ]),
+        ])
     },
-    h.nav([a.class("flex justify-between items-center p-2 bg-slate-950")], [
-      case model.pat_id {
-        None -> element.none()
-        Some(pat_id) ->
-          h.ul([a.class("flex space-x-4")], [
-            view_header_link(
-              current: model.route,
-              to: RoutePatient(pat_id, PatientOverview),
-              label: "Overview",
-            ),
-            view_header_link(
-              current: model.route,
-              to: RoutePatient(pat_id, PatientAllergies),
-              label: "Allergies",
-            ),
-            view_header_link(
-              current: model.route,
-              to: RoutePatient(pat_id, PatientMedications),
-              label: "Medications",
-            ),
-            view_header_link(
-              current: model.route,
-              to: RoutePatient(pat_id, PatientVitals),
-              label: "Vitals",
-            ),
-          ])
-      },
-    ]),
-    h.main([a.class("my-16")], {
-      case model.route {
-        RouteNoId(page:) ->
-          case page {
-            Index -> view_index()
-            Posts -> view_posts(model)
-            About -> view_about()
-            NotFound(uri) -> view_not_found(uri)
-          }
-
-        RoutePatient(_id, page:) ->
-          case page {
-            PatientOverview -> view_patient_overview(model)
-            PatientAllergies -> view_patient_allergies(model)
-            PatientMedications -> view_patient_medications(model)
-            PatientVitals -> view_patient_vitals(model)
-          }
-      }
-    }),
   ])
+}
+
+fn view_main(model: Model) {
+  h.main([a.class("my-16 flex-1")], {
+    case model.route {
+      RouteNoId(page:) ->
+        case page {
+          Index -> view_index()
+          Posts -> view_posts(model)
+          About -> view_about()
+          NotFound(uri) -> view_not_found(uri)
+        }
+      RoutePatient(_, page:) ->
+        case page {
+          PatientOverview -> view_patient_overview(model)
+          PatientAllergies -> view_patient_allergies(model)
+          PatientMedications -> view_patient_medications(model)
+          PatientVitals -> view_patient_vitals(model)
+        }
+    }
+  })
 }
 
 fn view_header_link(
