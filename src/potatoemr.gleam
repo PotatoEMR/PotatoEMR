@@ -2,9 +2,12 @@ import fhir/r4us
 import fhir/r4us_rsvp
 import fhir/r4us_sansio
 import fhir/r4us_valuesets
+import gleam/dynamic
+import gleam/dynamic/decode
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/result
 import gleam/string
 import gleam/uri.{type Uri}
 import lustre
@@ -12,9 +15,16 @@ import lustre/attribute.{type Attribute} as a
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html as h
+import lustre/element/svg
 import lustre/event
 import modem
 import utils.{opt_elt}
+
+@external(javascript, "./potatoemr_ffi.mjs", "read_file_from_event")
+fn read_file_from_event(
+  event: dynamic.Dynamic,
+  callback: fn(String) -> Nil,
+) -> Nil
 
 // MAIN ------------------------------------------------------------------------
 
@@ -113,6 +123,7 @@ type RoutePatientPage {
   PatientAllergies
   PatientMedications
   PatientVitals
+  PatientPhotos
 }
 
 // similarly when update goes to these routes
@@ -120,7 +131,7 @@ type RoutePatientPage {
 type RouteNoId {
   Index
   Posts
-  About
+  Settings
   NotFound(notfound: String)
 }
 
@@ -129,7 +140,7 @@ fn href(route: Route) -> Attribute(msg) {
     RouteNoId(page:) ->
       case page {
         Index -> "/"
-        About -> "/about"
+        Settings -> "/settings"
         Posts -> "/posts"
         NotFound(_) -> "/404"
       }
@@ -139,6 +150,7 @@ fn href(route: Route) -> Attribute(msg) {
         PatientAllergies -> "/patient/" <> id <> "/allergies"
         PatientMedications -> "/patient/" <> id <> "/medications"
         PatientVitals -> "/patient/" <> id <> "/vitals"
+        PatientPhotos -> "/patient/" <> id <> "/photos"
       }
   }
   a.href(url)
@@ -148,7 +160,7 @@ fn parse_route(uri: Uri) -> Route {
   case uri.path_segments(uri.path) {
     [] | [""] -> RouteNoId(Index)
     ["posts"] -> RouteNoId(Posts)
-    ["about"] -> RouteNoId(About)
+    ["settings"] -> RouteNoId(Settings)
     ["patient", id, page] ->
       case page {
         "overview" ->
@@ -175,6 +187,12 @@ fn parse_route(uri: Uri) -> Route {
             patient: PatientLoadStillLoading,
             page: PatientVitals,
           )
+        "photos" ->
+          RoutePatient(
+            id:,
+            patient: PatientLoadStillLoading,
+            page: PatientPhotos,
+          )
         _ -> uri |> uri.to_string |> NotFound |> RouteNoId
       }
     _ -> uri |> uri.to_string |> NotFound |> RouteNoId
@@ -185,6 +203,7 @@ fn parse_route(uri: Uri) -> Route {
 
 type Msg {
   UserNavigatedTo(route: Route)
+  UserClickedChangeClient(String)
   UserFocusedSearch
   UserBlurredSearch
   UserSearchedPatient(String)
@@ -193,6 +212,9 @@ type Msg {
   ServerCreatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
   ServerUpdatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
   ServerDeletedAllergy(Result(r4us.Operationoutcome, r4us_rsvp.Err))
+  ServerUpdatedPatientPhoto(Result(r4us.Patient, r4us_rsvp.Err))
+  UserSelectedPhotoEvent(dynamic.Dynamic)
+  UserSelectedPhotoDataUrl(String)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
@@ -223,15 +245,30 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
           // could do case on page here, but since we always do pateverything on load...
           // maybe don't need to do page case?
           // $everything might tax server? but good to stay in sync
-          let pateverything: Effect(Msg) =
-            r4us_rsvp.operation_any(
-              params: None,
-              operation_name: "everything",
-              res_type: "Patient",
-              res_id: Some(id),
-              res_decoder: r4us.bundle_decoder(),
-              client: model.client,
-              handle_response: ServerReturnedPatientEverything,
+
+          // let pateverything: Effect(Msg) =
+          //   r4us_rsvp.operation_any(
+          //     params: None,
+          //     operation_name: "everything",
+          //     res_type: "Patient",
+          //     res_id: Some(id),
+          //     res_decoder: r4us.bundle_decoder(),
+          //     client: model.client,
+          //     handle_response: ServerReturnedPatientEverything,
+          //   )
+
+          // a) not every server supports patient$everything
+          // b) everything returns bundle with resources we don't use,
+          // which wouldn't be the end of the world, except if they fail
+          // to decode, currently the whole bundle fails to decode
+          let pateverything =
+            r4us_rsvp.search_any(
+              "_id="
+                <> id
+                <> "&_revinclude=AllergyIntolerance:patient&_revinclude=MedicationRequest:patient&_revinclude=MedicationStatement:patient&_revinclude=Observation:patient&_revinclude=Condition:patient&_revinclude=Encounter:patient",
+              "Patient",
+              model.client,
+              ServerReturnedPatientEverything,
             )
           #(model, pateverything)
         }
@@ -240,6 +277,13 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       // currently closing search bar whenever changing page
       // might want to keep it open if not going to new patient, but would be a bit of work
       #(model, effect)
+    }
+    UserClickedChangeClient(baseurl) -> {
+      let client = r4us_rsvp.fhirclient_new(baseurl)
+      case client {
+        Ok(client) -> #(Model(..model, client:), effect.none())
+        Error(_) -> #(model, effect.none())
+      }
     }
     UserSearchedPatient(name) ->
       case name {
@@ -307,10 +351,65 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       }
       update_patient(model, fn(_oldpat) { pat })
     }
-    ServerReturnedPatientEverything(Error(_)) ->
+    ServerReturnedPatientEverything(Error(err)) ->
       update_patient(model, fn(_oldpat) {
+        echo err
         PatientLoadNotFound("error reading patient bundle")
       })
+    ServerUpdatedPatientPhoto(Ok(patient)) ->
+      update_patient(model, fn(pat) {
+        case pat {
+          PatientLoadFound(data:) ->
+            PatientLoadFound(PatientData(..data, patient:))
+          _ -> pat
+          // in _ case could creeate new patient data, but would be weird to be in that case
+        }
+      })
+    ServerUpdatedPatientPhoto(Error(err)) -> todo
+    UserSelectedPhotoEvent(event) -> #(
+      model,
+      effect.from(fn(dispatch) {
+        read_file_from_event(event, fn(data_url) {
+          dispatch(UserSelectedPhotoDataUrl(data_url))
+        })
+      }),
+    )
+    UserSelectedPhotoDataUrl(data_url) -> {
+      // data_url is like "data:image/png;base64,iVBOR..."
+      // split into content_type and base64 data for FHIR Attachment
+      case model.route {
+        RouteNoId(_) -> #(model, effect.none())
+        RoutePatient(id:, page:, patient:) ->
+          case patient {
+            PatientLoadFound(data:) -> {
+              let #(content_type, base64) = parse_data_url(data_url)
+              let new_photo =
+                r4us.Attachment(
+                  ..r4us.attachment_new(),
+                  content_type: Some(content_type),
+                  data: Some(base64),
+                )
+              let updated_patient =
+                r4us.Patient(
+                  ..data.patient,
+                  photo: [new_photo, ..data.patient.photo],
+                )
+              let effect = case
+                r4us_rsvp.patient_update(
+                  updated_patient,
+                  model.client,
+                  ServerUpdatedPatientPhoto,
+                )
+              {
+                Ok(eff) -> eff
+                Error(_) -> effect.none()
+              }
+              #(model, effect)
+            }
+            _ -> #(model, effect.none())
+          }
+      }
+    }
   }
 }
 
@@ -320,22 +419,6 @@ fn set_search_result(model: Model, results: SearchPatientResults) {
 
 fn set_search_visible(model: Model, visible: Bool) {
   Model(..model, search: SearchPatient(..model.search, visible:))
-}
-
-fn update_patient_if_have_patient_already(
-  model: Model,
-  update_pat,
-) -> #(Model, Effect(a)) {
-  let update = fn(patient) {
-    let new_pat = case patient {
-      PatientLoadFound(data:) -> {
-        let new_data = update_pat(data)
-        PatientLoadFound(new_data)
-      }
-      _ -> patient
-    }
-  }
-  update_patient(model, update)
 }
 
 fn update_patient(
@@ -352,6 +435,31 @@ fn update_patient(
       )
     }
   }
+}
+
+fn parse_data_url(data_url: String) -> #(String, String) {
+  // "data:image/png;base64,iVBOR..." -> #("image/png", "iVBOR...")
+  case string.split_once(data_url, ",") {
+    Ok(#(header, base64)) -> {
+      let content_type =
+        header
+        |> string.drop_start(5)
+        |> string.split_once(";")
+        |> result.map(fn(pair) { pair.0 })
+        |> result.unwrap("application/octet-stream")
+      #(content_type, base64)
+    }
+    Error(_) -> #("application/octet-stream", data_url)
+  }
+}
+
+fn on_file_input(msg: fn(dynamic.Dynamic) -> Msg) -> Attribute(Msg) {
+  let raw_decoder =
+    decode.new_primitive_decoder("Dynamic", fn(dyn) { Ok(dyn) })
+  event.on("change", {
+    use evt <- decode.then(raw_decoder)
+    decode.success(msg(evt))
+  })
 }
 
 // VIEW ------------------------------------------------------------------------
@@ -430,8 +538,8 @@ fn view(model: Model) -> Element(Msg) {
           ),
           view_header_link(
             current: model.route,
-            to: RouteNoId(About),
-            label: "About",
+            to: RouteNoId(Settings),
+            label: "Settings",
           ),
         ]),
       ],
@@ -441,7 +549,7 @@ fn view(model: Model) -> Element(Msg) {
         h.main([a.class("my-16 flex-1")], case route {
           Index -> view_index()
           Posts -> view_posts(model)
-          About -> view_about()
+          Settings -> view_settings(model)
           NotFound(not_found) -> view_not_found(not_found)
         })
       RoutePatient(id:, patient:, page:) ->
@@ -458,9 +566,20 @@ fn view(model: Model) -> Element(Msg) {
                 [h.text("patient " <> id <> " not found: " <> err)]
               }
               PatientLoadFound(data:) -> {
-                //let photo = model.pat.photo |> list.find_map(utils.get_img_src)
+                let photo =
+                  data.patient.photo
+                  |> list.find_map(utils.get_img_src)
+                let photo = case photo {
+                  Ok(src) -> h.img([a.src(src), a.alt("Patient Photo")])
+                  Error(_) -> view_patient_not_found()
+                }
                 [
-                  h.img([a.src("abc"), a.alt("Patient Photo")]),
+                  h.a(
+                    [
+                      href(RoutePatient(id:, patient:, page: PatientPhotos)),
+                    ],
+                    [photo],
+                  ),
                   h.text("pat hi"),
                 ]
               }
@@ -491,8 +610,8 @@ fn view(model: Model) -> Element(Msg) {
               PatientLoadStillLoading -> {
                 h.text("loading")
               }
-              PatientLoadNotFound(err) -> {
-                h.text("patient " <> id <> " not found: " <> err)
+              PatientLoadNotFound(_) -> {
+                h.text("loading")
               }
               PatientLoadFound(data:) -> {
                 h.div([], case page {
@@ -500,6 +619,7 @@ fn view(model: Model) -> Element(Msg) {
                   PatientAllergies -> view_patient_allergies(data)
                   PatientMedications -> view_patient_medications(data)
                   PatientVitals -> view_patient_vitals(data)
+                  PatientPhotos -> view_patient_photos(data)
                 })
               }
             },
@@ -552,18 +672,67 @@ fn view_posts(model: Model) -> List(Element(msg)) {
   [h.p([], [h.text("hi")])]
 }
 
-fn view_about() -> List(Element(msg)) {
-  [
-    title("Me"),
-    paragraph(
-      "I document the odd occurrences that catch my attention and rewrite my own
-       narrative along the way. I'm fine being referred to with pronouns.",
-    ),
-    paragraph(
-      "If you enjoy these glimpses into my mind, feel free to come back
-       semi-regularly. But not too regularly, you creep.",
-    ),
+fn view_settings(model: Model) -> List(Element(Msg)) {
+  let current_url = uri.to_string(model.client.baseurl)
+  echo current_url
+  let servers = [
+    "https://r4.smarthealthit.org/",
+    "https://hapi.fhir.org/baseR4",
+    "https://server.fire.ly",
   ]
+  [
+    title("Settings"),
+    h.div([a.class("mt-8")], [
+      h.p([a.class("mb-4 text-lg")], [h.text("FHIR Server Base URL")]),
+      h.div(
+        [],
+        list.map(servers, fn(url) {
+          h.label(
+            [
+              a.class("my-2 block"),
+              event.on_click(UserClickedChangeClient(url)),
+            ],
+            [
+              h.input([
+                a.type_("radio"),
+                a.name("fhir-server"),
+                a.checked(url == current_url),
+              ]),
+              h.span([a.class("ml-2")], [h.text(url)]),
+            ],
+          )
+        }),
+      ),
+    ]),
+  ]
+}
+
+fn view_patient_not_found() {
+  svg.svg(
+    [
+      a.attribute("width", "150px"),
+      a.attribute("height", "150px"),
+      a.attribute("viewBox", "0 0 150 150"),
+      a.attribute("alt", "Patient Photo"),
+      a.class("mx-auto block rounded"),
+    ],
+    [
+      svg.path([
+        a.attribute("fill", "#ccc"),
+        a.attribute(
+          "d",
+          "M 104.68731,56.689353 C 102.19435,80.640493 93.104981,97.26875 74.372196,97.26875 55.639402,97.26875 46.988823,82.308034 44.057005,57.289941 41.623314,34.938838 55.639402,15.800152 74.372196,15.800152 c 18.732785,0 32.451944,18.493971 30.315114,40.889201 z",
+        ),
+      ]),
+      svg.path([
+        a.attribute("fill", "#ccc"),
+        a.attribute(
+          "d",
+          "M 92.5675 89.6048 C 90.79484 93.47893 89.39893 102.4504 94.86478 106.9039 C 103.9375 114.2963 106.7064 116.4723 118.3117 118.9462 C 144.0432 124.4314 141.6492 138.1543 146.5244 149.2206 L 4.268444 149.1023 C 8.472223 138.6518 6.505799 124.7812 32.40051 118.387 C 41.80992 116.0635 45.66513 113.8823 53.58659 107.0158 C 58.52744 102.7329 57.52583 93.99267 56.43084 89.26926 C 52.49275 88.83011 94.1739 88.14054 92.5675 89.6048 z",
+        ),
+      ]),
+    ],
+  )
 }
 
 fn view_not_found(not_found: String) {
@@ -630,6 +799,32 @@ fn view_patient_medications(_model) {
 
 fn view_patient_vitals(_model) {
   [h.p([], [h.text("vitals")])]
+}
+
+fn view_patient_photos(data: PatientData) {
+  let photos =
+    list.filter_map(data.patient.photo, fn(photo) {
+      case utils.get_img_src(photo) {
+        Ok(src) ->
+          Ok(
+            h.div([a.class("inline-block m-2")], [
+              h.img([a.src(src), a.alt("Patient Photo"), a.class("max-w-xs rounded")]),
+            ]),
+          )
+        Error(_) -> Error(Nil)
+      }
+    })
+  [
+    h.div([a.class("p-4")], [
+      h.h3([a.class("text-lg mb-4")], [h.text("Upload Photo")]),
+      h.input([
+        a.type_("file"),
+        a.attribute("accept", "image/*"),
+        on_file_input(UserSelectedPhotoEvent),
+      ]),
+    ]),
+    h.div([a.class("p-4")], photos),
+  ]
 }
 
 // VIEW HELPERS ----------------------------------------------------------------
