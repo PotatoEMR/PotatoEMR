@@ -26,27 +26,21 @@ pub fn main() {
 }
 
 fn init(_) -> #(Model, Effect(Msg)) {
+  let assert Ok(client) =
+    r4us_rsvp.fhirclient_new("https://r4.smarthealthit.org")
+
   // when user clicks a link in app, send msg to update fn
   let modem_effect =
     modem.init(fn(uri) { uri |> parse_route |> UserNavigatedTo })
 
-  let assert Ok(client) =
-    r4us_rsvp.fhirclient_new("https://r4.smarthealthit.org")
-
   let search =
-    PatientSearch(
+    SearchPatient(
       text: "",
       visible: False,
-      results: PatientSearchResultsEmptyMsg,
+      results: SearchPatientResultsEmptyMsg,
     )
-  let model =
-    Model(
-      route: RouteNoId(Index),
-      client:,
-      search:,
-      pat_id: None,
-      patient_allergy: [],
-    )
+  let model = Model(route: RouteNoId(Index), client:, search:)
+
   // when someone comes from outside app to url, start at this route
   let route = case modem.initial_uri() {
     Ok(uri) -> parse_route(uri)
@@ -64,24 +58,18 @@ fn init(_) -> #(Model, Effect(Msg)) {
 // MODEL -----------------------------------------------------------------------
 
 type Model {
-  Model(
-    pat_id: Option(String),
-    client: r4us_rsvp.FhirClient,
-    search: PatientSearch,
-    route: Route,
-    patient_allergy: List(r4us.Allergyintolerance),
-  )
+  Model(client: r4us_rsvp.FhirClient, search: SearchPatient, route: Route)
 }
 
-type PatientSearch {
-  PatientSearch(text: String, visible: Bool, results: PatientSearchResults)
+type SearchPatient {
+  SearchPatient(text: String, visible: Bool, results: SearchPatientResults)
 }
 
-type PatientSearchResults {
-  PatientSearchResultsPats(pats: List(r4us.Patient))
-  PatientSearchResultsErrMsg(err_msg: String)
-  PatientSearchResultsLoadingMsg
-  PatientSearchResultsEmptyMsg
+type SearchPatientResults {
+  SearchPatientResultsPats(pats: List(r4us.Patient))
+  SearchPatientResultsErrMsg(err_msg: String)
+  SearchPatientResultsLoadingMsg
+  SearchPatientResultsEmptyMsg
 }
 
 type Visible {
@@ -94,13 +82,32 @@ type Visible {
 // and in sync with labels in view
 
 type Route {
-  RoutePatient(id: String, page: RoutePatientPage)
+  RoutePatient(id: String, patient: PatientLoad, page: RoutePatientPage)
   RouteNoId(page: RouteNoId)
+}
+
+type PatientLoad {
+  PatientLoadStillLoading
+  PatientLoadFound(data: PatientData)
+  PatientLoadNotFound(String)
+}
+
+type PatientData {
+  PatientData(
+    patient: r4us.Patient,
+    patient_allergies: List(r4us.Allergyintolerance),
+    patient_medications: List(r4us.Medication),
+    patient_observations: List(r4us.Observation),
+  )
 }
 
 // while you could just stick these directly in route
 // separating makes update easier to set model patient id
 // without duplicating set id for each patient page
+// plus guarantuee patient routes have a patient id
+// a patient with that id existing is NOT guarantueed though
+// model.patient is an option, might have a patient id that doesn't exist on server
+// in which case show not found view
 type RoutePatientPage {
   PatientOverview
   PatientAllergies
@@ -114,7 +121,7 @@ type RouteNoId {
   Index
   Posts
   About
-  NotFound(uri: Uri)
+  NotFound(notfound: String)
 }
 
 fn href(route: Route) -> Attribute(msg) {
@@ -126,7 +133,7 @@ fn href(route: Route) -> Attribute(msg) {
         Posts -> "/posts"
         NotFound(_) -> "/404"
       }
-    RoutePatient(id:, page:) ->
+    RoutePatient(_patient, id:, page:) ->
       case page {
         PatientOverview -> "/patient/" <> id <> "/overview"
         PatientAllergies -> "/patient/" <> id <> "/allergies"
@@ -144,13 +151,33 @@ fn parse_route(uri: Uri) -> Route {
     ["about"] -> RouteNoId(About)
     ["patient", id, page] ->
       case page {
-        "overview" -> RoutePatient(id, PatientOverview)
-        "allergies" -> RoutePatient(id, PatientAllergies)
-        "medications" -> RoutePatient(id, PatientMedications)
-        "vitals" -> RoutePatient(id, PatientVitals)
-        _ -> RouteNoId(NotFound(uri:))
+        "overview" ->
+          RoutePatient(
+            id:,
+            patient: PatientLoadStillLoading,
+            page: PatientOverview,
+          )
+        "allergies" ->
+          RoutePatient(
+            id:,
+            patient: PatientLoadStillLoading,
+            page: PatientAllergies,
+          )
+        "medications" ->
+          RoutePatient(
+            id:,
+            patient: PatientLoadStillLoading,
+            page: PatientMedications,
+          )
+        "vitals" ->
+          RoutePatient(
+            id:,
+            patient: PatientLoadStillLoading,
+            page: PatientVitals,
+          )
+        _ -> uri |> uri.to_string |> NotFound |> RouteNoId
       }
-    _ -> RouteNoId(NotFound(uri:))
+    _ -> uri |> uri.to_string |> NotFound |> RouteNoId
   }
 }
 
@@ -161,8 +188,8 @@ type Msg {
   UserFocusedSearch
   UserBlurredSearch
   UserSearchedPatient(String)
-  ServerReturnedPatients(Result(List(r4us.Patient), r4us_rsvp.Err))
-  ServerReturnedAllergies(Result(List(r4us.Allergyintolerance), r4us_rsvp.Err))
+  ServerReturnedSearchPatients(Result(List(r4us.Patient), r4us_rsvp.Err))
+  ServerReturnedPatientEverything(Result(r4us.Bundle, r4us_rsvp.Err))
   ServerCreatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
   ServerUpdatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
   ServerDeletedAllergy(Result(r4us.Operationoutcome, r4us_rsvp.Err))
@@ -171,50 +198,53 @@ type Msg {
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     UserNavigatedTo(route:) -> {
-      let model = Model(..model, route:) |> set_search_visible(False)
-      // currently closing search bar whenever changing page
-      // might want to keep it open if not going to new patient, but would be a bit of work
-      case route {
-        RouteNoId(page) -> {
-          let model = Model(..model, pat_id: None)
-          case page {
-            Index -> #(model, effect.none())
-            Posts -> #(model, effect.none())
-            About -> #(model, effect.none())
-            NotFound(_) -> #(model, effect.none())
-          }
+      let #(model, effect) = case route {
+        RouteNoId(_page) -> {
+          let model = Model(..model, route:)
+          #(model, effect.none())
         }
-        RoutePatient(pat_id, page) -> {
-          let model = Model(..model, pat_id: Some(pat_id))
-          case page {
-            PatientAllergies -> {
-              let search_allergies: Effect(Msg) =
-                r4us_rsvp.allergyintolerance_search(
-                  search_for: r4us_sansio.SpAllergyintolerance(
-                    ..r4us_sansio.sp_allergyintolerance_new(),
-                    patient: Some("Patient/" <> pat_id),
-                  ),
-                  with_client: model.client,
-                  response_msg: ServerReturnedAllergies,
-                )
-              #(Model(..model, patient_allergy: []), search_allergies)
-            }
-            // patient search -> click result navigates to overview
-            // which sets current pat_id
-            PatientOverview -> #(
-              Model(..model, pat_id: Some(pat_id)),
-              effect.none(),
-            )
-            PatientMedications -> #(model, effect.none())
-            PatientVitals -> #(model, effect.none())
+        RoutePatient(_page, _patient, id:) -> {
+          // before getting all patient data, keep current patient data
+          // so the sidebar and page will reload with new data if available
+          // but will not blow away sidebar on every navigation while loading
+          // instead keep patient from current route, and put in new route
+          // at least until new patient data loads
+          let existing_patient = case model.route {
+            RouteNoId(_) -> PatientLoadStillLoading
+            RoutePatient(existing_id, existing_patient, _existing_page) ->
+              case id == existing_id {
+                False -> PatientLoadStillLoading
+                True -> existing_patient
+              }
           }
+          let route = RoutePatient(..route, patient: existing_patient)
+          let model = Model(..model, route:)
+          // send request to get all patient data
+          // could do case on page here, but since we always do pateverything on load...
+          // maybe don't need to do page case?
+          // $everything might tax server? but good to stay in sync
+          let pateverything: Effect(Msg) =
+            r4us_rsvp.operation_any(
+              params: None,
+              operation_name: "everything",
+              res_type: "Patient",
+              res_id: Some(id),
+              res_decoder: r4us.bundle_decoder(),
+              client: model.client,
+              handle_response: ServerReturnedPatientEverything,
+            )
+          #(model, pateverything)
         }
       }
+      let model = model |> set_search_visible(False)
+      // currently closing search bar whenever changing page
+      // might want to keep it open if not going to new patient, but would be a bit of work
+      #(model, effect)
     }
     UserSearchedPatient(name) ->
       case name {
         "" -> #(
-          model |> set_search_result(PatientSearchResultsEmptyMsg),
+          model |> set_search_result(SearchPatientResultsEmptyMsg),
           effect.none(),
         )
         name -> {
@@ -225,45 +255,103 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
                 name: Some(name),
               ),
               with_client: model.client,
-              response_msg: ServerReturnedPatients,
+              response_msg: ServerReturnedSearchPatients,
             )
-          let model = model |> set_search_result(PatientSearchResultsLoadingMsg)
+          let model = model |> set_search_result(SearchPatientResultsLoadingMsg)
           #(model, search)
         }
       }
-    ServerReturnedPatients(Ok(pats)) -> #(
-      model |> set_search_result(PatientSearchResultsPats(pats)),
+    ServerReturnedSearchPatients(Ok(pats)) -> #(
+      model |> set_search_result(SearchPatientResultsPats(pats)),
       effect.none(),
     )
-    ServerReturnedPatients(Error(_err)) -> {
+    ServerReturnedSearchPatients(Error(_err)) -> {
       #(
-        model |> set_search_result(PatientSearchResultsErrMsg("error")),
+        model |> set_search_result(SearchPatientResultsErrMsg("error")),
         effect.none(),
       )
     }
     UserFocusedSearch -> #(model |> set_search_visible(True), effect.none())
     UserBlurredSearch -> #(model |> set_search_visible(False), effect.none())
-    ServerReturnedAllergies(Ok(patient_allergy)) -> #(
-      Model(..model, patient_allergy:),
-      effect.none(),
-    )
-    ServerReturnedAllergies(Error(_)) -> #(model, effect.none())
-    ServerCreatedAllergy(Ok(allergy)) -> #(
-      Model(..model, patient_allergy: [allergy, ..model.patient_allergy]),
-      effect.none(),
-    )
+    ServerCreatedAllergy(Ok(allergy)) ->
+      case model.route {
+        RouteNoId(_) -> #(model, effect.none())
+        RoutePatient(id:, page:, patient:) -> {
+          let new_pat = case patient {
+            PatientLoadFound(data:) -> {
+              let patient_allergies = [allergy, ..data.patient_allergies]
+              PatientLoadFound(PatientData(..data, patient_allergies:))
+            }
+            _ -> patient
+          }
+          #(
+            Model(..model, route: RoutePatient(id:, page:, patient: new_pat)),
+            effect.none(),
+          )
+        }
+      }
     ServerCreatedAllergy(Error(_)) -> todo
     ServerUpdatedAllergy(_) -> todo
     ServerDeletedAllergy(_) -> todo
+    ServerReturnedPatientEverything(Ok(pat_bundle)) -> {
+      let resources = r4us_sansio.bundle_to_groupedresources(pat_bundle)
+      let pat = case resources.patient {
+        [] -> PatientLoadNotFound("no patient found")
+        [first, ..] ->
+          PatientLoadFound(PatientData(
+            patient: first,
+            patient_allergies: resources.allergyintolerance,
+            patient_medications: resources.medication,
+            patient_observations: resources.observation,
+          ))
+      }
+      update_patient(model, fn(_oldpat) { pat })
+    }
+    ServerReturnedPatientEverything(Error(_)) ->
+      update_patient(model, fn(_oldpat) {
+        PatientLoadNotFound("error reading patient bundle")
+      })
   }
 }
 
-fn set_search_result(model: Model, results: PatientSearchResults) {
-  Model(..model, search: PatientSearch(..model.search, results:))
+fn set_search_result(model: Model, results: SearchPatientResults) {
+  Model(..model, search: SearchPatient(..model.search, results:))
 }
 
 fn set_search_visible(model: Model, visible: Bool) {
-  Model(..model, search: PatientSearch(..model.search, visible:))
+  Model(..model, search: SearchPatient(..model.search, visible:))
+}
+
+fn update_patient_if_have_patient_already(
+  model: Model,
+  update_pat,
+) -> #(Model, Effect(a)) {
+  let update = fn(patient) {
+    let new_pat = case patient {
+      PatientLoadFound(data:) -> {
+        let new_data = update_pat(data)
+        PatientLoadFound(new_data)
+      }
+      _ -> patient
+    }
+  }
+  update_patient(model, update)
+}
+
+fn update_patient(
+  model: Model,
+  update_pat: fn(PatientLoad) -> PatientLoad,
+) -> #(Model, Effect(a)) {
+  case model.route {
+    RouteNoId(_) -> #(model, effect.none())
+    RoutePatient(id:, page:, patient:) -> {
+      let new_pat = update_pat(patient)
+      #(
+        Model(..model, route: RoutePatient(id:, page:, patient: new_pat)),
+        effect.none(),
+      )
+    }
+  }
 }
 
 // VIEW ------------------------------------------------------------------------
@@ -297,12 +385,12 @@ fn view(model: Model) -> Element(Msg) {
                     event.prevent_default(event.on_mouse_down(UserFocusedSearch)),
                   ],
                   case model.search.results {
-                    PatientSearchResultsErrMsg(err_msg:) -> [
+                    SearchPatientResultsErrMsg(err_msg:) -> [
                       h.p([a.class("red-300")], [h.text(err_msg)]),
                     ]
-                    PatientSearchResultsLoadingMsg -> [h.text("loading...")]
-                    PatientSearchResultsEmptyMsg -> [h.text("empty")]
-                    PatientSearchResultsPats(pats:) ->
+                    SearchPatientResultsLoadingMsg -> [h.text("loading...")]
+                    SearchPatientResultsEmptyMsg -> [h.text("empty")]
+                    SearchPatientResultsPats(pats:) ->
                       case pats {
                         [] -> [h.p([], [h.text("no patients found")])]
                         pats ->
@@ -313,7 +401,11 @@ fn view(model: Model) -> Element(Msg) {
                                 Some(id) ->
                                   view_header_link(
                                     current: model.route,
-                                    to: RoutePatient(id, PatientOverview),
+                                    to: RoutePatient(
+                                      id,
+                                      PatientLoadStillLoading,
+                                      PatientOverview,
+                                    ),
                                     label: utils.humannames_to_single_name_string(
                                       pat.name,
                                     ),
@@ -344,15 +436,35 @@ fn view(model: Model) -> Element(Msg) {
         ]),
       ],
     ),
-    case model.pat_id {
-      None -> view_main(model)
-      Some(pat_id) ->
-        h.div([a.class("flex flex-1")], [
+    case model.route {
+      RouteNoId(route) ->
+        h.main([a.class("my-16 flex-1")], case route {
+          Index -> view_index()
+          Posts -> view_posts(model)
+          About -> view_about()
+          NotFound(not_found) -> view_not_found(not_found)
+        })
+      RoutePatient(id:, patient:, page:) ->
+        h.main([a.class("flex flex-1")], [
           h.nav(
             [
               a.class("w-48 bg-slate-800 border-r border-slate-700"),
             ],
-            [h.text("pat hi")],
+            case patient {
+              PatientLoadStillLoading -> {
+                [h.text("loading")]
+              }
+              PatientLoadNotFound(err) -> {
+                [h.text("patient " <> id <> " not found: " <> err)]
+              }
+              PatientLoadFound(data:) -> {
+                //let photo = model.pat.photo |> list.find_map(utils.get_img_src)
+                [
+                  h.img([a.src("abc"), a.alt("Patient Photo")]),
+                  h.text("pat hi"),
+                ]
+              }
+            },
           ),
           h.div([a.class("flex-1")], [
             h.ul(
@@ -370,37 +482,31 @@ fn view(model: Model) -> Element(Msg) {
                 |> list.map(fn(link) {
                   view_header_link(
                     current: model.route,
-                    to: RoutePatient(pat_id, link.0),
+                    to: RoutePatient(id, PatientLoadStillLoading, link.0),
                     label: link.1,
                   )
                 }),
             ),
-            view_main(model),
+            case patient {
+              PatientLoadStillLoading -> {
+                h.text("loading")
+              }
+              PatientLoadNotFound(err) -> {
+                h.text("patient " <> id <> " not found: " <> err)
+              }
+              PatientLoadFound(data:) -> {
+                h.div([], case page {
+                  PatientOverview -> view_patient_overview(data)
+                  PatientAllergies -> view_patient_allergies(data)
+                  PatientMedications -> view_patient_medications(data)
+                  PatientVitals -> view_patient_vitals(data)
+                })
+              }
+            },
           ]),
         ])
     },
   ])
-}
-
-fn view_main(model: Model) {
-  h.main([a.class("my-16 flex-1")], {
-    case model.route {
-      RouteNoId(page:) ->
-        case page {
-          Index -> view_index()
-          Posts -> view_posts(model)
-          About -> view_about()
-          NotFound(uri) -> view_not_found(uri)
-        }
-      RoutePatient(_, page:) ->
-        case page {
-          PatientOverview -> view_patient_overview(model)
-          PatientAllergies -> view_patient_allergies(model)
-          PatientMedications -> view_patient_medications(model)
-          PatientVitals -> view_patient_vitals(model)
-        }
-    }
-  })
 }
 
 fn view_header_link(
@@ -460,22 +566,22 @@ fn view_about() -> List(Element(msg)) {
   ]
 }
 
-fn view_not_found(not_found: uri.Uri) -> List(Element(msg)) {
-  h.p([], [h.text("404 not found: " <> uri.to_string(not_found))]) |> list.wrap
+fn view_not_found(not_found: String) {
+  [h.p([], [h.text(not_found)])]
 }
 
-fn view_patient_overview(_model) -> List(Element(msg)) {
+fn view_patient_overview(_model) {
   [h.p([], [h.text("overview")])]
 }
 
-fn view_patient_allergies(model: Model) -> List(Element(msg)) {
+fn view_patient_allergies(pat: PatientData) {
   let head =
     h.tr(
       [],
       utils.th_list(["allergy", "criticality", "notes", "date_recorded"]),
     )
   let rows =
-    list.map(model.patient_allergy, fn(allergy) {
+    list.map(pat.patient_allergies, fn(allergy) {
       h.tr([], [
         h.td([], [
           case allergy.code {
@@ -518,11 +624,11 @@ fn view_patient_allergies(model: Model) -> List(Element(msg)) {
   ]
 }
 
-fn view_patient_medications(_model) -> List(Element(msg)) {
+fn view_patient_medications(_model) {
   [h.p([], [h.text("meds")])]
 }
 
-fn view_patient_vitals(_model) -> List(Element(msg)) {
+fn view_patient_vitals(_model) {
   [h.p([], [h.text("vitals")])]
 }
 

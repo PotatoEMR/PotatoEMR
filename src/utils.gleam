@@ -89,3 +89,14 @@ pub fn th(s) {
 pub fn th_list(s) {
   s |> list.map(th)
 }
+
+pub fn get_img_src(img: r4us.Attachment) {
+  case img.url {
+    Some(url) -> Ok(url)
+    None ->
+      case img.data, img.content_type {
+        Some(data), Some(ctype) -> Ok("data:" <> ctype <> ";base64," <> data)
+        _, _ -> Error(Nil)
+      }
+  }
+}
