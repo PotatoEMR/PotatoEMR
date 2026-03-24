@@ -621,7 +621,9 @@ fn view(model: Model) -> Element(Msg) {
         h.main([a.class("flex flex-1")], [
           h.nav(
             [
-              a.class("w-56 bg-slate-800 border-r border-slate-700 flex flex-col items-center p-2"),
+              a.class(
+                "w-56 bg-slate-800 border-r border-slate-700 flex flex-col items-center p-2",
+              ),
             ],
             case patient {
               PatientLoadStillLoading -> {
@@ -919,22 +921,18 @@ fn view_patient_photos(model: Model, data: PatientData) {
 
 fn view_patient_photo_box(src, click_effect) {
   let attrs = [
+    a.src(src),
+    a.alt("Patient Photo"),
     a.class(
-      "w-48 h-48 border rounded border-slate-700 bg-slate-900 flex items-center justify-center hover:opacity-50 transition-opacity cursor-pointer",
+      "w-48 h-48 object-cover rounded-full hover:opacity-50 transition-opacity cursor-pointer",
     ),
+    a.attribute("draggable", "false"),
   ]
   let attrs = case click_effect {
     Some(click_effect) -> [click_effect, ..attrs]
     None -> attrs
   }
-  h.div(attrs, [
-    h.img([
-      a.src(src),
-      a.alt("Patient Photo"),
-      a.class("max-w-full max-h-full object-contain"),
-      a.attribute("draggable", "false"),
-    ]),
-  ])
+  h.img(attrs)
 }
 
 fn title(title: String) -> Element(msg) {
