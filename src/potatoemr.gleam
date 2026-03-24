@@ -20,6 +20,8 @@ import lustre/event
 import modem
 import utils.{opt_elt}
 
+const patient_photo_placeholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Cpath fill='%23ccc' d='M 104.68731,56.689353 C 102.19435,80.640493 93.104981,97.26875 74.372196,97.26875 55.639402,97.26875 46.988823,82.308034 44.057005,57.289941 41.623314,34.938838 55.639402,15.800152 74.372196,15.800152 c 18.732785,0 32.451944,18.493971 30.315114,40.889201 z'/%3E%3Cpath fill='%23ccc' d='M 92.5675 89.6048 C 90.79484 93.47893 89.39893 102.4504 94.86478 106.9039 C 103.9375 114.2963 106.7064 116.4723 118.3117 118.9462 C 144.0432 124.4314 141.6492 138.1543 146.5244 149.2206 L 4.268444 149.1023 C 8.472223 138.6518 6.505799 124.7812 32.40051 118.387 C 41.80992 116.0635 45.66513 113.8823 53.58659 107.0158 C 58.52744 102.7329 57.52583 93.99267 56.43084 89.26926 C 52.49275 88.83011 94.1739 88.14054 92.5675 89.6048 z'/%3E%3C/svg%3E"
+
 @external(javascript, "./potatoemr_ffi.mjs", "read_file_from_event")
 fn read_file_from_event(
   event: dynamic.Dynamic,
@@ -236,6 +238,7 @@ type Msg {
   UserSelectedPhotoEvent(dynamic.Dynamic)
   UserSelectedPhotoDataUrl(String)
   UserDraggingPhoto(Bool)
+  UserClickedExistingPhoto(Int)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
@@ -387,13 +390,14 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         }
       })
     ServerUpdatedPatientPhoto(Error(err)) -> todo
-    UserDraggingPhoto(dragging_photo) -> case model.route {
-      RoutePatient(page: PatientPhotos, ..) -> #(
-        Model(..model, dragging_photo:),
-        effect.none(),
-      )
-      _ -> #(model, effect.none())
-    }
+    UserDraggingPhoto(dragging_photo) ->
+      case model.route {
+        RoutePatient(page: PatientPhotos, ..) -> #(
+          Model(..model, dragging_photo:),
+          effect.none(),
+        )
+        _ -> #(model, effect.none())
+      }
     UserSelectedPhotoEvent(event) -> #(
       Model(..model, dragging_photo: False),
       effect.from(fn(dispatch) {
@@ -417,10 +421,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
                   data: Some(base64),
                 )
               let updated_patient =
-                r4us.Patient(
-                  ..data.patient,
-                  photo: [new_photo, ..data.patient.photo],
-                )
+                r4us.Patient(..data.patient, photo: [
+                  new_photo,
+                  ..data.patient.photo
+                ])
               let effect = case
                 r4us_rsvp.patient_update(
                   updated_patient,
@@ -437,6 +441,40 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
           }
         _ -> #(model, effect.none())
       }
+    }
+    UserClickedExistingPhoto(num) -> {
+      update_patient(model, fn(pat) {
+        case pat {
+          PatientLoadFound(data:) -> {
+            case data.patient.photo {
+              [] -> todo
+              [first, ..] -> {
+                // indicating use this picture by moving to front of list
+                // is not that short but not terrible
+                // but idk if json guarantueed to keep order on server
+                // might be better to indicate chosen profile pic another way
+                let #(move_to_front, photos) =
+                  list.index_fold(
+                    over: data.patient.photo,
+                    from: #(first, []),
+                    with: fn(acc, existing_photo, idx) {
+                      case idx == num {
+                        True -> #(existing_photo, acc.1)
+                        False -> #(acc.0, [existing_photo, ..acc.1])
+                      }
+                    },
+                  )
+                let photos = list.reverse(photos)
+                let photos = [move_to_front, ..photos]
+                let newpat = r4us.Patient(..data.patient, photo: photos)
+                let newdata = PatientData(..data, patient: newpat)
+                PatientLoadFound(newdata)
+              }
+            }
+          }
+          _ -> pat
+        }
+      })
     }
   }
 }
@@ -482,14 +520,12 @@ fn parse_data_url(data_url: String) -> #(String, String) {
 }
 
 fn on_file_input(msg: fn(dynamic.Dynamic) -> Msg) -> Attribute(Msg) {
-  let raw_decoder =
-    decode.new_primitive_decoder("Dynamic", fn(dyn) { Ok(dyn) })
+  let raw_decoder = decode.new_primitive_decoder("Dynamic", fn(dyn) { Ok(dyn) })
   event.on("change", {
     use evt <- decode.then(raw_decoder)
     decode.success(msg(evt))
   })
 }
-
 
 // VIEW ------------------------------------------------------------------------
 
@@ -585,7 +621,7 @@ fn view(model: Model) -> Element(Msg) {
         h.main([a.class("flex flex-1")], [
           h.nav(
             [
-              a.class("w-48 bg-slate-800 border-r border-slate-700"),
+              a.class("w-56 bg-slate-800 border-r border-slate-700 flex flex-col items-center p-2"),
             ],
             case patient {
               PatientLoadStillLoading -> {
@@ -598,10 +634,10 @@ fn view(model: Model) -> Element(Msg) {
                 let photo =
                   data.patient.photo
                   |> list.find_map(utils.get_img_src)
-                let photo = case photo {
-                  Ok(src) -> h.img([a.src(src), a.alt("Patient Photo")])
-                  Error(_) -> view_patient_not_found()
-                }
+                  |> result.unwrap(patient_photo_placeholder)
+                  |> view_patient_photo_box(None)
+                // view_patient_photo_box takes Msg to run on click
+                // but here we navigate with href/modem instead, and pass None in for msg
                 [
                   h.a(
                     [
@@ -832,56 +868,74 @@ fn view_patient_vitals(_model) {
 
 fn view_patient_photos(model: Model, data: PatientData) {
   let photos =
-    list.filter_map(data.patient.photo, fn(photo) {
+    list.index_map(data.patient.photo, fn(photo, num) {
       case utils.get_img_src(photo) {
         Ok(src) ->
-          Ok(
-            h.div([a.class("inline-block m-2")], [
-              h.img([a.src(src), a.alt("Patient Photo"), a.class("max-w-xs rounded")]),
-            ]),
+          view_patient_photo_box(
+            src,
+            Some(event.on_click(UserClickedExistingPhoto(num))),
           )
-        Error(_) -> Error(Nil)
+        Error(_) -> h.div([a.class("hidden")], [])
       }
     })
   let dropzone_class = case model.dragging_photo {
-    True -> "border-2 border-dashed border-blue-500 bg-blue-50 rounded-lg p-6 text-center transition-colors"
-    False -> "border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors"
+    True ->
+      "border-2 border-dashed border-blue-500 bg-blue-50 rounded-lg p-6 text-center transition-colors"
+    False ->
+      "border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors"
   }
   [
-    h.div(
-      [a.class("min-h-full")],
-      [
-        h.div([a.class("p-4")], [
-          h.div([a.class(dropzone_class)], [
-            h.h3([a.class("text-lg mb-2")], [h.text("Upload Photo")]),
-            h.label(
-              [
-                a.class(
-                  "inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded cursor-pointer hover:bg-blue-700 active:bg-blue-800 transition-colors",
-                ),
-              ],
-              [
-                h.text("Choose File"),
-                h.input([
-                  a.type_("file"),
-                  a.attribute("accept", "image/*"),
-                  a.class("hidden"),
-                  on_file_input(UserSelectedPhotoEvent),
-                ]),
-              ],
-            ),
-            h.p([a.class("mt-2 text-sm text-gray-500")], [
-              h.text("or drag and drop an image anywhere on this page"),
-            ]),
+    h.div([a.class("min-h-full")], [
+      h.div([a.class("p-4")], [
+        h.div([a.class(dropzone_class)], [
+          h.h3([a.class("text-lg mb-2")], [h.text("Upload Photo")]),
+          h.label(
+            [
+              a.class(
+                "inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded cursor-pointer hover:bg-blue-700 active:bg-blue-800 transition-colors",
+              ),
+            ],
+            [
+              h.text("Choose File"),
+              h.input([
+                a.type_("file"),
+                a.attribute("accept", "image/*"),
+                a.class("hidden"),
+                on_file_input(UserSelectedPhotoEvent),
+              ]),
+            ],
+          ),
+          h.p([a.class("mt-2 text-sm text-gray-500")], [
+            h.text("or drag and drop an image anywhere on this page"),
           ]),
         ]),
-        h.div([a.class("p-4")], photos),
-      ],
-    ),
+      ]),
+      h.div([a.class("p-4 flex flex-wrap gap-2")], photos),
+    ]),
   ]
 }
 
 // VIEW HELPERS ----------------------------------------------------------------
+
+fn view_patient_photo_box(src, click_effect) {
+  let attrs = [
+    a.class(
+      "w-48 h-48 border rounded border-slate-700 bg-slate-900 flex items-center justify-center hover:opacity-50 transition-opacity cursor-pointer",
+    ),
+  ]
+  let attrs = case click_effect {
+    Some(click_effect) -> [click_effect, ..attrs]
+    None -> attrs
+  }
+  h.div(attrs, [
+    h.img([
+      a.src(src),
+      a.alt("Patient Photo"),
+      a.class("max-w-full max-h-full object-contain"),
+      a.attribute("draggable", "false"),
+    ]),
+  ])
+}
 
 fn title(title: String) -> Element(msg) {
   h.h2([a.class("text-3xl text-purple-800 font-light")], [
