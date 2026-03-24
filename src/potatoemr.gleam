@@ -410,7 +410,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       // data_url is like "data:image/png;base64,iVBOR..."
       // split into content_type and base64 data for FHIR Attachment
       case model.route {
-        RoutePatient(id:, page: PatientPhotos, patient:) ->
+        RoutePatient(id:, page:, patient:) ->
           case patient {
             PatientLoadFound(data:) -> {
               let #(content_type, base64) = parse_data_url(data_url)
@@ -420,21 +420,25 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
                   content_type: Some(content_type),
                   data: Some(base64),
                 )
-              let updated_patient =
+              let newpat =
                 r4us.Patient(..data.patient, photo: [
                   new_photo,
                   ..data.patient.photo
                 ])
-              let effect = case
-                r4us_rsvp.patient_update(
-                  updated_patient,
+              let effect =
+                newpat
+                |> r4us_rsvp.patient_update(
                   model.client,
                   ServerUpdatedPatientPhoto,
                 )
-              {
-                Ok(eff) -> eff
-                Error(_) -> effect.none()
-              }
+                |> result.unwrap(effect.none())
+              // don't *have* to update model patient photo here
+              // as the server response msg will update model
+              // but if we do it here too the user gets instant feedback
+              let newdata = PatientData(..data, patient: newpat)
+              let patient = PatientLoadFound(newdata)
+              let model =
+                Model(..model, route: RoutePatient(id:, page:, patient:))
               #(model, effect)
             }
             _ -> #(model, effect.none())
@@ -443,40 +447,56 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       }
     }
     UserClickedExistingPhoto(num) -> {
-      update_patient(model, fn(pat) {
-        case pat {
-          PatientLoadFound(data:) -> {
-            case data.patient.photo {
-              [] -> todo
-              [first, ..] -> {
-                // indicating use this picture by moving to front of list
-                // is not that short but not terrible
-                // but idk if json guarantueed to keep order on server
-                // might be better to indicate chosen profile pic another way
-                let #(move_to_front, photos) =
-                  list.index_fold(
-                    over: data.patient.photo,
-                    from: #(first, []),
-                    with: fn(acc, existing_photo, idx) {
-                      case idx == num {
-                        True -> #(existing_photo, acc.1)
-                        False -> #(acc.0, [existing_photo, ..acc.1])
-                      }
-                    },
-                  )
-                let photos = list.reverse(photos)
-                let photos = [move_to_front, ..photos]
-                let newpat = r4us.Patient(..data.patient, photo: photos)
-                let newdata = PatientData(..data, patient: newpat)
-                PatientLoadFound(newdata)
+      case model.route {
+        RoutePatient(id:, page:, patient:) ->
+          case patient {
+            PatientLoadFound(data:) -> {
+              case data.patient.photo {
+                [] -> todo
+                [first, ..] -> {
+                  // indicating use this picture by moving to front of list
+                  // is not that short but not terrible
+                  // but idk if json guarantueed to keep order on server
+                  // might be better to indicate chosen profile pic another way
+                  let #(move_to_front, photos) =
+                    list.index_fold(
+                      over: data.patient.photo,
+                      from: #(first, []),
+                      with: fn(acc, existing_photo, idx) {
+                        case idx == num {
+                          True -> #(existing_photo, acc.1)
+                          False -> #(acc.0, [existing_photo, ..acc.1])
+                        }
+                      },
+                    )
+                  let photos = list.reverse(photos)
+                  let photos = [move_to_front, ..photos]
+                  let newpat = r4us.Patient(..data.patient, photo: photos)
+                  let newdata = PatientData(..data, patient: newpat)
+                  let patient = PatientLoadFound(newdata)
+                  let effect =
+                    newpat
+                    |> r4us_rsvp.patient_update(
+                      model.client,
+                      ServerUpdatedPatientPhoto,
+                    )
+                    |> result.unwrap(effect.none())
+                  let model =
+                    Model(..model, route: RoutePatient(id:, page:, patient:))
+                  #(model, effect)
+                }
               }
             }
+            _ -> #(model, effect.none())
           }
-          _ -> pat
-        }
-      })
+        _ -> #(model, effect.none())
+      }
     }
   }
+}
+
+fn send_model_pat_to_server(model: Model) {
+  todo
 }
 
 fn set_search_result(model: Model, results: SearchPatientResults) {
