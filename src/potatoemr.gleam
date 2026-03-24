@@ -26,6 +26,12 @@ fn read_file_from_event(
   callback: fn(String) -> Nil,
 ) -> Nil
 
+@external(javascript, "./potatoemr_ffi.mjs", "setup_body_dropzone")
+fn setup_body_dropzone(
+  on_drag: fn(Bool) -> Nil,
+  on_drop_file: fn(String) -> Nil,
+) -> Nil
+
 // MAIN ------------------------------------------------------------------------
 
 pub fn main() {
@@ -49,7 +55,8 @@ fn init(_) -> #(Model, Effect(Msg)) {
       visible: False,
       results: SearchPatientResultsEmptyMsg,
     )
-  let model = Model(route: RouteNoId(Index), client:, search:)
+  let model =
+    Model(route: RouteNoId(Index), client:, search:, dragging_photo: False)
 
   // when someone comes from outside app to url, start at this route
   let route = case modem.initial_uri() {
@@ -62,13 +69,26 @@ fn init(_) -> #(Model, Effect(Msg)) {
   // when they navigate to /patient/abc123/allergies
   let #(model, firstload_effect) = update(model, UserNavigatedTo(route))
 
-  #(model, effect.batch([modem_effect, firstload_effect]))
+  let dropzone_effect =
+    effect.from(fn(dispatch) {
+      setup_body_dropzone(
+        fn(dragging) { dispatch(UserDraggingPhoto(dragging)) },
+        fn(data_url) { dispatch(UserSelectedPhotoDataUrl(data_url)) },
+      )
+    })
+
+  #(model, effect.batch([modem_effect, firstload_effect, dropzone_effect]))
 }
 
 // MODEL -----------------------------------------------------------------------
 
 type Model {
-  Model(client: r4us_rsvp.FhirClient, search: SearchPatient, route: Route)
+  Model(
+    client: r4us_rsvp.FhirClient,
+    search: SearchPatient,
+    route: Route,
+    dragging_photo: Bool,
+  )
 }
 
 type SearchPatient {
@@ -215,6 +235,7 @@ type Msg {
   ServerUpdatedPatientPhoto(Result(r4us.Patient, r4us_rsvp.Err))
   UserSelectedPhotoEvent(dynamic.Dynamic)
   UserSelectedPhotoDataUrl(String)
+  UserDraggingPhoto(Bool)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
@@ -366,8 +387,15 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         }
       })
     ServerUpdatedPatientPhoto(Error(err)) -> todo
+    UserDraggingPhoto(dragging_photo) -> case model.route {
+      RoutePatient(page: PatientPhotos, ..) -> #(
+        Model(..model, dragging_photo:),
+        effect.none(),
+      )
+      _ -> #(model, effect.none())
+    }
     UserSelectedPhotoEvent(event) -> #(
-      model,
+      Model(..model, dragging_photo: False),
       effect.from(fn(dispatch) {
         read_file_from_event(event, fn(data_url) {
           dispatch(UserSelectedPhotoDataUrl(data_url))
@@ -378,8 +406,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       // data_url is like "data:image/png;base64,iVBOR..."
       // split into content_type and base64 data for FHIR Attachment
       case model.route {
-        RouteNoId(_) -> #(model, effect.none())
-        RoutePatient(id:, page:, patient:) ->
+        RoutePatient(id:, page: PatientPhotos, patient:) ->
           case patient {
             PatientLoadFound(data:) -> {
               let #(content_type, base64) = parse_data_url(data_url)
@@ -408,6 +435,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
             }
             _ -> #(model, effect.none())
           }
+        _ -> #(model, effect.none())
       }
     }
   }
@@ -461,6 +489,7 @@ fn on_file_input(msg: fn(dynamic.Dynamic) -> Msg) -> Attribute(Msg) {
     decode.success(msg(evt))
   })
 }
+
 
 // VIEW ------------------------------------------------------------------------
 
@@ -619,7 +648,7 @@ fn view(model: Model) -> Element(Msg) {
                   PatientAllergies -> view_patient_allergies(data)
                   PatientMedications -> view_patient_medications(data)
                   PatientVitals -> view_patient_vitals(data)
-                  PatientPhotos -> view_patient_photos(data)
+                  PatientPhotos -> view_patient_photos(model, data)
                 })
               }
             },
@@ -801,7 +830,7 @@ fn view_patient_vitals(_model) {
   [h.p([], [h.text("vitals")])]
 }
 
-fn view_patient_photos(data: PatientData) {
+fn view_patient_photos(model: Model, data: PatientData) {
   let photos =
     list.filter_map(data.patient.photo, fn(photo) {
       case utils.get_img_src(photo) {
@@ -814,16 +843,41 @@ fn view_patient_photos(data: PatientData) {
         Error(_) -> Error(Nil)
       }
     })
+  let dropzone_class = case model.dragging_photo {
+    True -> "border-2 border-dashed border-blue-500 bg-blue-50 rounded-lg p-6 text-center transition-colors"
+    False -> "border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors"
+  }
   [
-    h.div([a.class("p-4")], [
-      h.h3([a.class("text-lg mb-4")], [h.text("Upload Photo")]),
-      h.input([
-        a.type_("file"),
-        a.attribute("accept", "image/*"),
-        on_file_input(UserSelectedPhotoEvent),
-      ]),
-    ]),
-    h.div([a.class("p-4")], photos),
+    h.div(
+      [a.class("min-h-full")],
+      [
+        h.div([a.class("p-4")], [
+          h.div([a.class(dropzone_class)], [
+            h.h3([a.class("text-lg mb-2")], [h.text("Upload Photo")]),
+            h.label(
+              [
+                a.class(
+                  "inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded cursor-pointer hover:bg-blue-700 active:bg-blue-800 transition-colors",
+                ),
+              ],
+              [
+                h.text("Choose File"),
+                h.input([
+                  a.type_("file"),
+                  a.attribute("accept", "image/*"),
+                  a.class("hidden"),
+                  on_file_input(UserSelectedPhotoEvent),
+                ]),
+              ],
+            ),
+            h.p([a.class("mt-2 text-sm text-gray-500")], [
+              h.text("or drag and drop an image anywhere on this page"),
+            ]),
+          ]),
+        ]),
+        h.div([a.class("p-4")], photos),
+      ],
+    ),
   ]
 }
 
