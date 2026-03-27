@@ -499,61 +499,50 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       }
     }
     UserTypedAllergyintoleranceNote(input:, on_id:) ->
-      echo update_patient(model, fn(pat) {
-        case pat {
-          PatientLoadFound(data:) -> {
-            case on_id {
-              None -> {
-                let new_note = case data.patient_allergy_new.note {
+      if_pat_data_update_patient(model, fn(data) {
+        case on_id {
+          None -> {
+            let new_note = case data.patient_allergy_new.note {
+              [] -> [r4us.annotation_new(input)]
+              [note] -> [r4us.Annotation(..note, text: input)]
+              [note, ..rest] -> [r4us.Annotation(..note, text: input), ..rest]
+            }
+            let new_allergy =
+              r4us.Allergyintolerance(
+                ..data.patient_allergy_new,
+                note: new_note,
+              )
+            PatientData(..data, patient_allergy_new: new_allergy)
+          }
+          Some(_) -> {
+            let on_allergy =
+              list.find(data.patient_allergies, fn(allergy) {
+                allergy.id == on_id
+              })
+            case on_allergy {
+              // strange case if existing allergy has no id to identify it in list
+              Error(_) -> data
+              Ok(on_allergy) -> {
+                let allergy_rest =
+                  list.filter(data.patient_allergies, fn(allergy) {
+                    allergy.id != on_id
+                  })
+                let new_note = case on_allergy.note {
                   [] -> [r4us.annotation_new(input)]
                   [note] -> [r4us.Annotation(..note, text: input)]
-                  [note, ..rest] -> [
+                  [note, ..note_rest] -> [
                     r4us.Annotation(..note, text: input),
-                    ..rest
+                    ..note_rest
                   ]
                 }
-                let new_allergy =
-                  r4us.Allergyintolerance(
-                    ..data.patient_allergy_new,
-                    note: new_note,
-                  )
-                let data = PatientData(..data, patient_allergy_new: new_allergy)
-                PatientLoadFound(data)
-              }
-              Some(_) -> {
-                let on_allergy =
-                  list.find(data.patient_allergies, fn(allergy) {
-                    allergy.id == on_id
-                  })
-                case on_allergy {
-                  // strange case if existing allergy has no id to identify it in list
-                  Error(_) -> pat
-                  Ok(on_allergy) -> {
-                    let allergy_rest =
-                      list.filter(data.patient_allergies, fn(allergy) {
-                        allergy.id != on_id
-                      })
-                    let new_note = case on_allergy.note {
-                      [] -> [r4us.annotation_new(input)]
-                      [note] -> [r4us.Annotation(..note, text: input)]
-                      [note, ..note_rest] -> [
-                        r4us.Annotation(..note, text: input),
-                        ..note_rest
-                      ]
-                    }
-                    let new_allergy = [
-                      r4us.Allergyintolerance(..on_allergy, note: new_note),
-                      ..allergy_rest
-                    ]
-                    let data =
-                      PatientData(..data, patient_allergies: new_allergy)
-                    PatientLoadFound(data)
-                  }
-                }
+                let new_allergy = [
+                  r4us.Allergyintolerance(..on_allergy, note: new_note),
+                  ..allergy_rest
+                ]
+                PatientData(..data, patient_allergies: new_allergy)
               }
             }
           }
-          _ -> pat
         }
       })
     UserClickedCreateAllergy -> {
@@ -587,6 +576,28 @@ fn set_search_result(model: Model, results: SearchPatientResults) {
 
 fn set_search_visible(model: Model, visible: Bool) {
   Model(..model, search: SearchPatient(..model.search, visible:))
+}
+
+// if model doesnt have patient when trying to update patient data (weird?), don't do anything
+// could maybe use the other update_patient fn but want to be able to send effect
+fn if_pat_data_update_patient(
+  model: Model,
+  update_pat: fn(PatientData) -> PatientData,
+) -> #(Model, Effect(a)) {
+  case model.route {
+    RouteNoId(_) -> #(model, effect.none())
+    RoutePatient(id:, page:, patient:) -> {
+      case patient {
+        PatientLoadFound(data:) -> {
+          let newpatient = PatientLoadFound(update_pat(data))
+          let model =
+            Model(..model, route: RoutePatient(id:, page:, patient: newpatient))
+          #(model, effect.none())
+        }
+        _ -> #(model, effect.none())
+      }
+    }
+  }
 }
 
 fn update_patient(
@@ -983,10 +994,22 @@ fn view_patient_allergies(pat: PatientData) {
           a.name("choice"),
         ],
         [
-          h.option([a.value("option1")], "Option 1"),
-          h.option([a.value("option2")], "Option 2"),
-          h.option([a.value("option3")], "Option 3"),
-        ],
+          r4us_valuesets.AllergyintolerancecriticalityLow,
+          r4us_valuesets.AllergyintolerancecriticalityHigh,
+          r4us_valuesets.AllergyintolerancecriticalityUnabletoassess,
+        ]
+          |> list.map(fn(criticality) {
+            let crit_str =
+              r4us_valuesets.allergyintolerancecriticality_to_string(
+                criticality,
+              )
+            h.option(
+              [
+                a.value(crit_str),
+              ],
+              crit_str,
+            )
+          }),
       ),
       h.input([a.class("border border-slate-700 bg-slate-950")]),
       h.button([event.on_click(UserClickedCreateAllergy)], [

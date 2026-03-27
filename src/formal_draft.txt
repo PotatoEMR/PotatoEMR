@@ -1,0 +1,148 @@
+seems like a lot of boilerplate
+could maybe reduce but then would be very abstract
+since it's all in browser maybe lustre msgs more with the grain?
+formal more for doing stuff on server?
+ofc watch controlled inputs be even more annoying...
+
+fn allergyintolerance_form(
+  from existing: r4us.Allergyintolerance,
+) -> Form(r4us.Allergyintolerance) {
+  form.new({
+    use code <- form.field("category", { form.parse_string })
+    use criticality <- form.field("criticality", {
+      form.parse_string
+      |> form.map(r4us_valuesets.allergyintolerancecriticality_from_string)
+    })
+    let criticality = criticality |> option.from_result
+    use category <- form.field("category", {
+      form.parse_string
+      |> form.map(r4us_valuesets.allergyintolerancecategory_from_string)
+    })
+    let category = case category {
+      Error(_) -> []
+      Ok(category) -> [category]
+    }
+    use text <- form.field("note", { form.parse_string })
+    let note = [r4us.annotation_new(text)]
+    use recorded_date <- form.field("recorded_date", { form.parse_string })
+    let recorded_date = Some(recorded_date)
+    form.success(
+      r4us.Allergyintolerance(
+        ..existing,
+        criticality:,
+        category:,
+        note:,
+        recorded_date:,
+      ),
+    )
+  })
+}
+
+fn view_allergyintolerance_form(
+  from existing: r4us.Allergyintolerance,
+  using form: Form(r4us.Allergyintolerance),
+) {
+  // Lustre sends us the form data as a list of tuples, which we can then
+  // process, decode, or send off to our backend.
+  //
+  // Here, we use `formal` to turn the form values we got into Gleam data.
+  let handle_submit = fn(values) {
+    form
+    |> form.add_values(values)
+    |> form.run
+    |> UserSubmittedAllergyintolerance
+  }
+
+  h.form(
+    [
+      a.class("p-8 w-full border rounded-2xl shadow-lg space-y-4"),
+      // The message provided to the built-in `on_submit` handler receives the
+      // `FormData` associated with the form as a List of (name, value) tuples.
+      //
+      // The event handler also calls `preventDefault()` on the form, such that
+      // Lustre can handle the submission instead off being sent off to the server.
+      event.on_submit(handle_submit),
+    ],
+    [
+      h.h1([a.class("text-2xl font-medium text-purple-600")], [
+        h.text("Create Allergy"),
+      ]),
+      //
+      view_allergyintolerance_input(
+        form,
+        is: "text",
+        name: "username",
+        label: "Username",
+      ),
+      view_allergyintolerance_input(
+        form,
+        is: "password",
+        name: "password",
+        label: "Password",
+      ),
+      view_allergyintolerance_input(
+        form,
+        is: "text",
+        name: "username",
+        label: "Username",
+      ),
+      view_allergyintolerance_input(
+        form,
+        is: "password",
+        name: "password",
+        label: "Password",
+      ),
+      //
+      h.div([a.class("flex justify-end")], [
+        h.button(
+          [
+            // buttons inside of forms submit the form by default.
+            a.class("text-white text-sm font-bold"),
+            a.class("px-4 py-2 bg-purple-600 rounded-lg"),
+            a.class("hover:bg-purple-800"),
+            a.class(
+              "focus:outline-2 focus:outline-offset-2 focus:outline-purple-800",
+            ),
+          ],
+          [h.text("Submit")],
+        ),
+      ]),
+    ],
+  )
+}
+
+fn view_allergyintolerance_input(
+  form: Form(r4us.Allergyintolerance),
+  is type_: String,
+  name name: String,
+  label label: String,
+) -> Element(msg) {
+  let errors = form.field_error_messages(form, name)
+
+  h.div([], [
+    h.label([a.for(name), a.class("text-xs font-bold text-slate-600")], [
+      h.text(label),
+      h.text(": "),
+    ]),
+    h.input([
+      a.type_(type_),
+      a.class("block mt-1 w-full px-3 py-1 border rounded-lg focus:shadow"),
+      case errors {
+        [] -> a.class("focus:outline focus:outline-purple-600")
+        _ -> a.class("outline outline-red-500")
+      },
+      // we use the `id` in the associated `for` a on the label.
+      a.id(name),
+      // the `name` attribute is used as the first element of the tuple
+      // we receive for this input.
+      a.name(name),
+    ]),
+    // formal provides us with customisable error messages for every element
+    // in case its validation fails, which we can show right below the input.
+    ..list.map(errors, fn(error_message) {
+      h.p([a.class("mt-0.5 text-xs text-red-500")], [
+        h.text(error_message),
+      ])
+    })
+  ])
+}
