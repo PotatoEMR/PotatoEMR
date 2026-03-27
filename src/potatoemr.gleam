@@ -987,11 +987,12 @@ fn view_patient_allergies(pat: PatientData) {
       ]),
       h.input([a.class("border border-slate-700 bg-slate-950")]),
       h.input([a.class("border border-slate-700 bg-slate-950")]),
+      h.label([a.for("criticality")], [h.text("criticality:")]),
       h.select(
         [
           a.class("border border-slate-700 bg-slate-950"),
-          a.id("choice"),
-          a.name("choice"),
+          a.id("criticality"),
+          a.name("criticality"),
         ],
         [
           r4us_valuesets.AllergyintolerancecriticalityLow,
