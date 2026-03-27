@@ -127,6 +127,7 @@ type PatientLoad {
 type PatientData {
   PatientData(
     patient: r4us.Patient,
+    patient_allergy_new: r4us.Allergyintolerance,
     patient_allergies: List(r4us.Allergyintolerance),
     patient_medications: List(r4us.Medication),
     patient_observations: List(r4us.Observation),
@@ -235,6 +236,8 @@ type Msg {
   ServerUpdatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
   ServerDeletedAllergy(Result(r4us.Operationoutcome, r4us_rsvp.Err))
   ServerUpdatedPatientPhoto(Result(r4us.Patient, r4us_rsvp.Err))
+  UserTypedAllergyintoleranceNote(input: String, on_id: Option(String))
+  UserClickedCreateAllergy
   UserSelectedPhotoEvent(dynamic.Dynamic)
   UserSelectedPhotoDataUrl(String)
   UserDraggingPhoto(Bool)
@@ -368,6 +371,9 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         [first, ..] ->
           PatientLoadFound(PatientData(
             patient: first,
+            patient_allergy_new: r4us.allergyintolerance_new(
+              utils.patient_to_reference(first),
+            ),
             patient_allergies: resources.allergyintolerance,
             patient_medications: resources.medication,
             patient_observations: resources.observation,
@@ -490,6 +496,82 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
             _ -> #(model, effect.none())
           }
         _ -> #(model, effect.none())
+      }
+    }
+    UserTypedAllergyintoleranceNote(input:, on_id:) ->
+      echo update_patient(model, fn(pat) {
+        case pat {
+          PatientLoadFound(data:) -> {
+            case on_id {
+              None -> {
+                let new_note = case data.patient_allergy_new.note {
+                  [] -> [r4us.annotation_new(input)]
+                  [note] -> [r4us.Annotation(..note, text: input)]
+                  [note, ..rest] -> [
+                    r4us.Annotation(..note, text: input),
+                    ..rest
+                  ]
+                }
+                let new_allergy =
+                  r4us.Allergyintolerance(
+                    ..data.patient_allergy_new,
+                    note: new_note,
+                  )
+                let data = PatientData(..data, patient_allergy_new: new_allergy)
+                PatientLoadFound(data)
+              }
+              Some(_) -> {
+                let on_allergy =
+                  list.find(data.patient_allergies, fn(allergy) {
+                    allergy.id == on_id
+                  })
+                case on_allergy {
+                  // strange case if existing allergy has no id to identify it in list
+                  Error(_) -> pat
+                  Ok(on_allergy) -> {
+                    let allergy_rest =
+                      list.filter(data.patient_allergies, fn(allergy) {
+                        allergy.id != on_id
+                      })
+                    let new_note = case on_allergy.note {
+                      [] -> [r4us.annotation_new(input)]
+                      [note] -> [r4us.Annotation(..note, text: input)]
+                      [note, ..note_rest] -> [
+                        r4us.Annotation(..note, text: input),
+                        ..note_rest
+                      ]
+                    }
+                    let new_allergy = [
+                      r4us.Allergyintolerance(..on_allergy, note: new_note),
+                      ..allergy_rest
+                    ]
+                    let data =
+                      PatientData(..data, patient_allergies: new_allergy)
+                    PatientLoadFound(data)
+                  }
+                }
+              }
+            }
+          }
+          _ -> pat
+        }
+      })
+    UserClickedCreateAllergy -> {
+      case model.route {
+        RouteNoId(page:) -> #(model, effect.none())
+        RoutePatient(id:, patient:, page:) ->
+          case patient {
+            PatientLoadFound(data) -> {
+              let effect =
+                r4us_rsvp.allergyintolerance_create(
+                  data.patient_allergy_new,
+                  model.client,
+                  ServerCreatedAllergy,
+                )
+              #(model, effect)
+            }
+            _ -> #(model, effect.none())
+          }
       }
     }
   }
@@ -642,7 +724,7 @@ fn view(model: Model) -> Element(Msg) {
           h.nav(
             [
               a.class(
-                "w-56 bg-slate-800 border-r border-slate-700 flex flex-col items-center p-2",
+                "w-56 shrink-0 bg-slate-800 border-r border-slate-700 flex flex-col items-center p-2",
               ),
             ],
             case patient {
@@ -667,7 +749,10 @@ fn view(model: Model) -> Element(Msg) {
                     ],
                     [photo],
                   ),
-                  h.text("pat hi"),
+                  h.text(
+                    patient.data.patient.name
+                    |> utils.humannames_to_single_name_string,
+                  ),
                 ]
               }
             },
@@ -857,11 +942,7 @@ fn view_patient_allergies(pat: PatientData) {
           },
         ]),
         h.td([], [
-          h.text(
-            allergy.note
-            |> list.map(utils.allergyintolerance_note_to_string)
-            |> string.concat,
-          ),
+          h.text(utils.annotation_first_text(allergy.note)),
         ]),
         h.td([], [
           case allergy.recorded_date {
@@ -872,10 +953,45 @@ fn view_patient_allergies(pat: PatientData) {
       ])
     })
   [
-    h.div([], [h.text("create allergy")]),
-    h.table([a.class("border-separate border-spacing-4")], [
+    h.h1([a.class("text-xl font-bold p-4")], [
+      h.text("Allergies and Intolerances"),
+    ]),
+    h.table([a.class("border-separate border-spacing-4 m-4")], [
       h.thead([], [head]),
       h.tbody([], rows),
+    ]),
+    h.div([a.class("flex flex-row gap-2")], [
+      h.p([], [h.text("inputs")]),
+      h.label([a.for("new-allergy-note")], [h.text("note:")]),
+      h.input([
+        a.class("border border-slate-700 bg-slate-950"),
+        a.id("new-allergy-note"),
+        event.on_input(fn(input) {
+          UserTypedAllergyintoleranceNote(on_id: None, input:)
+        }),
+        a.value(case pat.patient_allergy_new.note {
+          [] -> ""
+          [first, ..] -> first.text
+        }),
+      ]),
+      h.input([a.class("border border-slate-700 bg-slate-950")]),
+      h.input([a.class("border border-slate-700 bg-slate-950")]),
+      h.select(
+        [
+          a.class("border border-slate-700 bg-slate-950"),
+          a.id("choice"),
+          a.name("choice"),
+        ],
+        [
+          h.option([a.value("option1")], "Option 1"),
+          h.option([a.value("option2")], "Option 2"),
+          h.option([a.value("option3")], "Option 3"),
+        ],
+      ),
+      h.input([a.class("border border-slate-700 bg-slate-950")]),
+      h.button([event.on_click(UserClickedCreateAllergy)], [
+        h.text("Save New Allergy/Intolerance"),
+      ]),
     ]),
   ]
 }

@@ -62,8 +62,11 @@ pub fn coding_to_string(coding: r4us.Coding) -> String {
   }
 }
 
-pub fn allergyintolerance_note_to_string(note) {
-  "note todo"
+pub fn annotation_first_text(note: List(r4us.Annotation)) {
+  case note {
+    [] -> ""
+    [first, ..] -> first.text
+  }
 }
 
 // like option.map except for optonal lustre element if not none
@@ -99,4 +102,26 @@ pub fn get_img_src(img: r4us.Attachment) {
         _, _ -> Error(Nil)
       }
   }
+}
+
+pub fn patient_to_reference(res: r4us.Patient) {
+  let reference = case res.id {
+    Some(id) -> Some("Patient/" <> id)
+    None -> None
+  }
+  let type_ = Some("Patient")
+  let identifier = case res.identifier {
+    [] -> None
+    [first, ..] -> Some(first)
+  }
+  //pat to string todo
+  let display = None
+  r4us.Reference(
+    id: None,
+    extension: [],
+    reference:,
+    type_:,
+    identifier:,
+    display:,
+  )
 }
