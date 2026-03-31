@@ -125,3 +125,12 @@ pub fn patient_to_reference(res: r4us.Patient) {
     display:,
   )
 }
+
+pub fn coding(code code: String, system system: String, display display: String) {
+  r4us.Coding(
+    ..r4us.coding_new(),
+    code: Some(code),
+    system: Some(system),
+    display: Some(display),
+  )
+}

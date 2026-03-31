@@ -9,6 +9,7 @@ packages = [
   { name = "exception", version = "2.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "exception", source = "hex", outer_checksum = "329D269D5C2A314F7364BD2711372B6F2C58FA6F39981572E5CA68624D291F8C" },
   { name = "fhir", version = "0.2.0", build_tools = ["gleam"], requirements = ["argv", "filepath", "gleam_http", "gleam_httpc", "gleam_json", "gleam_stdlib", "gleam_time", "json", "lustre", "rsvp", "shellout", "simplifile"], otp_app = "fhir", source = "hex", outer_checksum = "BC606DB3E231BFE450FE88FACA04A8B1B9B3DD09D5B71067EB12E5F6B61AD402" },
   { name = "filepath", version = "1.1.2", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "filepath", source = "hex", outer_checksum = "B06A9AF0BF10E51401D64B98E4B627F1D2E48C154967DA7AF4D0914780A6D40A" },
+  { name = "formal", version = "3.0.1", build_tools = ["gleam"], requirements = ["gleam_stdlib", "gleam_time"], otp_app = "formal", source = "hex", outer_checksum = "8FBEB42758F90ACAA82A8B6B8FE11B4A3B2A2B290E97B4DDD4B7DCE98DEB885C" },
   { name = "gleam_community_ansi", version = "1.4.4", build_tools = ["gleam"], requirements = ["gleam_community_colour", "gleam_regexp", "gleam_stdlib"], otp_app = "gleam_community_ansi", source = "hex", outer_checksum = "1B3AEA6074AB34D5F0674744F36DDC7290303A03295507E2DEC61EDD6F5777FE" },
   { name = "gleam_community_colour", version = "2.0.4", build_tools = ["gleam"], requirements = ["gleam_json", "gleam_stdlib"], otp_app = "gleam_community_colour", source = "hex", outer_checksum = "6DB4665555D7D2B27F0EA32EF47E8BEBC4303821765F9C73D483F38EE24894F0" },
   { name = "gleam_crypto", version = "1.5.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_crypto", source = "hex", outer_checksum = "50774BAFFF1144E7872814C566C5D653D83A3EBF23ACC3156B757A1B6819086E" },
@@ -51,6 +52,7 @@ packages = [
 
 [requirements]
 fhir = { version = ">= 0.2.0 and < 1.0.0" }
+formal = { version = ">= 3.0.1 and < 4.0.0" }
 gleam_stdlib = { version = ">= 0.44.0 and < 2.0.0" }
 gleeunit = { version = ">= 1.0.0 and < 2.0.0" }
 lustre_dev_tools = { version = ">= 2.3.4 and < 3.0.0" }
