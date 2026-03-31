@@ -46,11 +46,11 @@ pub fn main() {
 
 fn init(_) -> #(Model, Effect(Msg)) {
   let assert Ok(client) =
-    r4us_rsvp.fhirclient_new("http://localhost:8080/fhir/")
+    r4us_rsvp.fhirclient_new("https://r4.smarthealthit.org/")
 
   // when user clicks a link in app, send msg to update fn
   let modem_effect =
-    modem.init(fn(uri) { uri |> parse_route |> UserNavigatedTo })
+    modem.init(fn(uri) { uri |> uri_to_route |> UserNavigatedTo })
 
   let search =
     SearchPatient(
@@ -63,7 +63,7 @@ fn init(_) -> #(Model, Effect(Msg)) {
 
   // when someone comes from outside app to url, start at this route
   let route = case modem.initial_uri() {
-    Ok(uri) -> parse_route(uri)
+    Ok(uri) -> uri_to_route(uri)
     Error(_) -> RouteNoId(Index)
   }
   // instead of just setting route in model we call update UserNavigatedTo(route)
@@ -105,12 +105,7 @@ type SearchPatientResults {
   SearchPatientResultsEmptyMsg
 }
 
-type Visible {
-  Show
-  Hide
-}
-
-// routes, parse_route type -> uri
+// routes, uri_to_route type -> uri
 // must stay in sync with Route uri -> type
 // and in sync with labels in view
 
@@ -161,7 +156,11 @@ type RouteNoId {
 }
 
 fn href(route: Route) -> Attribute(msg) {
-  let url = case route {
+  route |> route_to_urlstring |> a.href
+}
+
+fn route_to_urlstring(route: Route) -> String {
+  case route {
     RouteNoId(page:) ->
       case page {
         Index -> "/"
@@ -179,10 +178,9 @@ fn href(route: Route) -> Attribute(msg) {
         PatientPhotos -> "/patient/" <> id <> "/photos"
       }
   }
-  a.href(url)
 }
 
-fn parse_route(uri: Uri) -> Route {
+fn uri_to_route(uri: Uri) -> Route {
   case uri.path_segments(uri.path) {
     [] | [""] -> RouteNoId(Index)
     ["posts"] -> RouteNoId(Posts)
@@ -248,6 +246,7 @@ type Msg {
   UserDraggingPhoto(Bool)
   UserClickedExistingPhoto(Int)
   UserClickedRegisterPatient(Result(r4us.Patient, Form(r4us.Patient)))
+  ServerReturnedRegisterPatient(Result(r4us.Patient, r4us_rsvp.Err))
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
@@ -570,12 +569,35 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       }
     }
     UserClickedRegisterPatient(Ok(newpat)) -> {
-      echo "ok"
-      echo newpat
-      #(model, effect.none())
+      let effect =
+        r4us_rsvp.patient_create(
+          newpat,
+          model.client,
+          ServerReturnedRegisterPatient,
+        )
+      #(model, effect)
     }
     UserClickedRegisterPatient(Error(err)) -> {
       echo "err"
+      echo err
+      #(model, effect.none())
+    }
+    ServerReturnedRegisterPatient(Ok(created_pat)) ->
+      case created_pat.id {
+        None -> panic as "created no id?"
+        Some(id) -> {
+          let pat_url =
+            route_to_urlstring(RoutePatient(
+              id,
+              PatientLoadStillLoading,
+              PatientOverview,
+            ))
+            |> modem.push(None, None)
+          #(model, pat_url)
+        }
+      }
+    ServerReturnedRegisterPatient(Error(err)) -> {
+      echo "err on server"
       echo err
       #(model, effect.none())
     }
@@ -865,6 +887,112 @@ pub fn patient_schema() {
     Ok(gender) -> Some(gender)
     Error(_) -> None
   }
+  use race_display <- form.field("race", form.parse_string)
+  let race = case race_display {
+    "American Indian or Alaska Native" ->
+      utils.coding(
+        code: "1002-5",
+        system: "urn:oid:2.16.840.1.113883.6.238",
+        display: "American Indian or Alaska Native",
+      )
+    "Asian" ->
+      utils.coding(
+        code: "2028-9",
+        system: "urn:oid:2.16.840.1.113883.6.238",
+        display: "Asian",
+      )
+    "Black or African American" ->
+      utils.coding(
+        code: "2054-5",
+        system: "urn:oid:2.16.840.1.113883.6.238",
+        display: "Black or African American",
+      )
+    "Native Hawaiian or Other Pacific Islander" ->
+      utils.coding(
+        code: "2076-8",
+        system: "urn:oid:2.16.840.1.113883.6.238",
+        display: "Native Hawaiian or Other Pacific Islander",
+      )
+    "White" ->
+      utils.coding(
+        code: "2106-3",
+        system: "urn:oid:2.16.840.1.113883.6.238",
+        display: "White",
+      )
+    _ ->
+      utils.coding(
+        code: "UNK",
+        system: "http://terminology.hl7.org/CodeSystem/v3-NullFlavor",
+        display: "Unknown",
+      )
+  }
+  let us_core_race = [
+    r4us.UsCoreRace(text: race_display, detailed: [], omb_category: [race]),
+  ]
+  use address_line <- form.field(
+    "address_line",
+    form.parse_optional(form.parse_string),
+  )
+  use address_city <- form.field(
+    "address_city",
+    form.parse_optional(form.parse_string),
+  )
+  use address_state <- form.field(
+    "address_state",
+    form.parse_optional(form.parse_string),
+  )
+  use address_postal_code <- form.field(
+    "address_postal_code",
+    form.parse_optional(form.parse_string),
+  )
+  let address = case
+    address_line,
+    address_city,
+    address_state,
+    address_postal_code
+  {
+    None, None, None, None -> []
+    _, _, _, _ -> [
+      r4us.Address(
+        ..r4us.address_new(),
+        line: case address_line {
+          Some(l) -> [l]
+          None -> []
+        },
+        city: address_city,
+        state: address_state,
+        postal_code: address_postal_code,
+      ),
+    ]
+  }
+  use ethnicity_display <- form.field("ethnicity", form.parse_string)
+  let ethnicity = case ethnicity_display {
+    "Hispanic or Latino" ->
+      utils.coding(
+        code: "2135-2",
+        system: "urn:oid:2.16.840.1.113883.6.238",
+        display: "Hispanic or Latino",
+      )
+    "Not Hispanic or Latino" ->
+      utils.coding(
+        code: "2186-5",
+        system: "urn:oid:2.16.840.1.113883.6.238",
+        display: "Not Hispanic or Latino",
+      )
+    _ ->
+      utils.coding(
+        code: "UNK",
+        system: "http://terminology.hl7.org/CodeSystem/v3-NullFlavor",
+        display: "Unknown",
+      )
+  }
+  let us_core_ethnicity = [
+    r4us.UsCoreEthnicity(
+      text: ethnicity_display,
+      detailed: [],
+      omb_category: Some(ethnicity),
+    ),
+  ]
 
   form.success(
     r4us.Patient(
@@ -873,6 +1001,9 @@ pub fn patient_schema() {
       birth_date: birth_date,
       telecom:,
       gender:,
+      us_core_race:,
+      us_core_ethnicity:,
+      address:,
     ),
   )
 }
@@ -989,6 +1120,30 @@ fn view_registerpatient(newpatient: Form(r4us.Patient)) {
             "Not Hispanic or Latino",
           ],
           label: "ethnicity",
+        ),
+        view_form_input(
+          newpatient,
+          is: "text",
+          name: "address_line",
+          label: "address",
+        ),
+        view_form_input(
+          newpatient,
+          is: "text",
+          name: "address_city",
+          label: "city",
+        ),
+        view_form_input(
+          newpatient,
+          is: "text",
+          name: "address_state",
+          label: "state",
+        ),
+        view_form_input(
+          newpatient,
+          is: "text",
+          name: "address_postal_code",
+          label: "zip",
         ),
         //
         h.div([a.class("flex justify-end")], [
