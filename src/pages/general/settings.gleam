@@ -1,0 +1,56 @@
+import fhir/r4us_rsvp
+import gleam/list
+import gleam/uri
+import lustre
+import lustre/attribute.{type Attribute} as a
+import lustre/effect.{type Effect}
+import lustre/element.{type Element}
+import lustre/element/html as h
+import lustre/element/svg
+import lustre/event
+import model_msgs.{type Model, type Msg, Model} as mm
+import pages/general/registerpatient
+
+pub fn switch_client(model: Model, baseurl: String) -> #(Model, Effect(a)) {
+  let client = r4us_rsvp.fhirclient_new(baseurl)
+  case client {
+    Ok(client) -> #(Model(..model, client:), effect.none())
+    Error(_) -> #(model, effect.none())
+  }
+}
+
+pub fn view(model: Model) -> List(Element(Msg)) {
+  let current_url = uri.to_string(model.client.baseurl)
+  echo current_url
+  let servers = [
+    "https://r4.smarthealthit.org/",
+    "https://hapi.fhir.org/baseR4",
+    "https://server.fire.ly",
+    "http://localhost:8080/fhir/",
+  ]
+  [
+    h.p([], [h.text("Settings")]),
+    h.div([a.class("mt-8")], [
+      h.p([a.class("mb-4 text-lg")], [h.text("FHIR Server Base URL")]),
+      h.div(
+        [],
+        list.map(servers, fn(url) {
+          h.label(
+            [
+              a.class("my-2 block"),
+              event.on_click(mm.UserClickedChangeClient(url)),
+            ],
+            [
+              h.input([
+                a.type_("radio"),
+                a.name("fhir-server"),
+                a.checked(url == current_url),
+              ]),
+              h.span([a.class("ml-2")], [h.text(url)]),
+            ],
+          )
+        }),
+      ),
+    ]),
+  ]
+}

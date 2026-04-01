@@ -2,6 +2,7 @@ import fhir/r4us
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
+import lustre/attribute as a
 import lustre/element
 import lustre/element/html as h
 
@@ -133,4 +134,20 @@ pub fn coding(code code: String, system system: String, display display: String)
     system: Some(system),
     display: Some(display),
   )
+}
+
+pub fn view_patient_photo_box(src, click_effect) {
+  let attrs = [
+    a.src(src),
+    a.alt("Patient Photo"),
+    a.class(
+      "w-48 h-48 object-cover rounded-full hover:opacity-50 transition-opacity cursor-pointer",
+    ),
+    a.attribute("draggable", "false"),
+  ]
+  let attrs = case click_effect {
+    Some(click_effect) -> [click_effect, ..attrs]
+    None -> attrs
+  }
+  h.img(attrs)
 }
