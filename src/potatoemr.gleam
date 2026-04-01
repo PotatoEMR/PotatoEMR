@@ -3,20 +3,14 @@ import fhir/r4us_rsvp
 import fhir/r4us_sansio
 import fhir/r4us_valuesets
 import formal/form.{type Form}
-import gleam/dynamic
-import gleam/dynamic/decode
-import gleam/int
 import gleam/list
-import gleam/option.{type Option, None, Some}
+import gleam/option.{None, Some}
 import gleam/result
-import gleam/string
-import gleam/uri.{type Uri}
 import lustre
-import lustre/attribute.{type Attribute} as a
+import lustre/attribute as a
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html as h
-import lustre/element/svg
 import lustre/event
 import model_msgs.{type Model, type Msg, type Route, Model, href} as mm
 import modem
@@ -27,7 +21,6 @@ import pages/general/settings
 import pages/patient/allergy
 import pages/patient/medication
 import pages/patient/overview
-import pages/patient/patnotfound
 import pages/patient/photo
 import pages/patient/vitals
 import utils

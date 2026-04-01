@@ -1,26 +1,17 @@
 import fhir/r4us
 import fhir/r4us_rsvp
-import fhir/r4us_sansio
 import fhir/r4us_valuesets
 import formal/form.{type Form}
-import gleam/dynamic
-import gleam/dynamic/decode
-import gleam/int
 import gleam/list
-import gleam/option.{type Option, None, Some}
-import gleam/result
-import gleam/string
-import gleam/uri.{type Uri}
-import lustre
-import lustre/attribute.{type Attribute} as a
-import lustre/effect.{type Effect}
+import gleam/option.{None, Some}
+import gleam/uri
+import lustre/attribute as a
+import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html as h
-import lustre/element/svg
 import lustre/event
-import model_msgs.{type Model, type Msg, Model} as mm
+import model_msgs.{type Model, Model} as mm
 import modem
-import utils.{opt_elt}
 
 pub fn create(model: Model, newpat: r4us.Patient) {
   let effect =
