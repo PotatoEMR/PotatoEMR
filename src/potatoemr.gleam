@@ -303,10 +303,7 @@ fn view(model: Model) -> Element(Msg) {
             [
               #(mm.Index, "Home"),
               #(mm.Settings, "Settings"),
-              #(
-                mm.RegisterPatient(form.new(mm.patient_schema())),
-                "Register New Patient",
-              ),
+              #(mm.RegisterPatient(None), "Register New Patient"),
             ],
             current: model.route,
           )
