@@ -61,7 +61,6 @@ pub type PatientLoad {
 pub type PatientData {
   PatientData(
     patient: r4us.Patient,
-    patient_allergy_new: r4us.Allergyintolerance,
     patient_allergies: List(r4us.Allergyintolerance),
     patient_medications: List(r4us.Medication),
     patient_observations: List(r4us.Observation),
@@ -77,7 +76,7 @@ pub type PatientData {
 // in which case show not found view
 pub type RoutePatientPage {
   PatientOverview
-  PatientAllergies
+  PatientAllergies(form: Option(Form(r4us.Allergyintolerance)))
   PatientMedications
   PatientVitals
   PatientPhotos
@@ -108,7 +107,7 @@ pub fn route_to_urlstring(route: Route) -> String {
     RoutePatient(_patient, id:, page:) ->
       case page {
         PatientOverview -> "/patient/" <> id <> "/overview"
-        PatientAllergies -> "/patient/" <> id <> "/allergies"
+        PatientAllergies(_) -> "/patient/" <> id <> "/allergies"
         PatientMedications -> "/patient/" <> id <> "/medications"
         PatientVitals -> "/patient/" <> id <> "/vitals"
         PatientPhotos -> "/patient/" <> id <> "/photos"
@@ -133,7 +132,7 @@ pub fn uri_to_route(uri: Uri) -> Route {
           RoutePatient(
             id:,
             patient: PatientLoadStillLoading,
-            page: PatientAllergies,
+            page: PatientAllergies(None),
           )
         "medications" ->
           RoutePatient(
@@ -172,9 +171,11 @@ pub type Msg {
   ServerCreatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
   ServerUpdatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
   ServerDeletedAllergy(Result(r4us.Operationoutcome, r4us_rsvp.Err))
+  UserSubmittedAllergyForm(
+    Result(r4us.Allergyintolerance, Form(r4us.Allergyintolerance)),
+  )
+  UserClickedAllergyRowEdit(String)
   ServerUpdatedPatientPhoto(Result(r4us.Patient, r4us_rsvp.Err))
-  UserTypedAllergyintoleranceNote(input: String, on_id: Option(String))
-  UserClickedCreateAllergy
   UserSelectedPhotoEvent(dynamic.Dynamic)
   UserSelectedPhotoDataUrl(String)
   UserDraggingPhoto(Bool)

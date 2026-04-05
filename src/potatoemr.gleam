@@ -183,9 +183,6 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         [first, ..] ->
           mm.PatientLoadFound(mm.PatientData(
             patient: first,
-            patient_allergy_new: r4us.allergyintolerance_new(
-              utils.patient_to_reference(first),
-            ),
             patient_allergies: resources.allergyintolerance,
             patient_medications: resources.medication,
             patient_observations: resources.observation,
@@ -209,11 +206,13 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     mm.ServerUpdatedPatientPhoto(Ok(patient)) -> photo.update(model, patient)
     mm.ServerCreatedAllergy(Ok(alrgy)) -> allergy.server_created(model, alrgy)
     mm.ServerCreatedAllergy(Error(_)) -> todo
-    mm.ServerUpdatedAllergy(_) -> todo
+    mm.ServerUpdatedAllergy(Ok(alrgy)) -> allergy.server_updated(model, alrgy)
+    mm.ServerUpdatedAllergy(Error(_)) -> todo
     mm.ServerDeletedAllergy(_) -> todo
-    mm.UserTypedAllergyintoleranceNote(input:, on_id:) ->
-      allergy.type_note(model, input, on_id)
-    mm.UserClickedCreateAllergy -> allergy.create(model)
+    mm.UserClickedAllergyRowEdit(id) -> allergy.edit(model, id)
+    mm.UserSubmittedAllergyForm(Ok(new_allergy)) ->
+      allergy.submit(model, new_allergy)
+    mm.UserSubmittedAllergyForm(Error(err)) -> allergy.form_errors(model, err)
     mm.UserClickedRegisterPatient(Ok(newpat)) ->
       registerpatient.create(model, newpat)
     mm.UserClickedRegisterPatient(Error(err)) ->
@@ -369,7 +368,7 @@ fn view(model: Model) -> Element(Msg) {
               ],
               [
                 #(mm.PatientOverview, "Overview"),
-                #(mm.PatientAllergies, "Allergies"),
+                #(mm.PatientAllergies(None), "Allergies"),
                 #(mm.PatientMedications, "Medications"),
                 #(mm.PatientVitals, "Vitals"),
               ]
@@ -391,7 +390,8 @@ fn view(model: Model) -> Element(Msg) {
               mm.PatientLoadFound(data:) -> {
                 h.div([], case page {
                   mm.PatientOverview -> overview.view(data)
-                  mm.PatientAllergies -> allergy.view(data)
+                  mm.PatientAllergies(allergy_form) ->
+                    allergy.view(data, allergy_form)
                   mm.PatientMedications -> medication.view(data)
                   mm.PatientVitals -> vitals.view(data)
                   mm.PatientPhotos -> photo.view(model, data)
