@@ -23,7 +23,6 @@ pub fn server_created(
   model: Model,
   allergy: r4us.Allergyintolerance,
 ) -> #(Model, Effect(a)) {
-  echo "created"
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
     mm.RoutePatient(id:, page:, patient:) -> {
@@ -34,10 +33,10 @@ pub fn server_created(
         }
         _ -> patient
       }
-      #(
-        Model(..model, route: mm.RoutePatient(id:, page:, patient: new_pat)),
-        effect.none(),
-      )
+      let model =
+        model
+        |> set_form_state(id:, patient: new_pat, formstate: mm.FormStateNone)
+      #(model, effect.none())
     }
   }
 }
@@ -46,98 +45,105 @@ pub fn server_updated(
   model: Model,
   updated_allergy: r4us.Allergyintolerance,
 ) -> #(Model, Effect(a)) {
-  echo "updated"
-  echo updated_allergy
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
     mm.RoutePatient(id:, page:, patient:) -> {
       let new_pat = case patient {
         mm.PatientLoadFound(data:) -> {
           let patient_allergies =
-            list.fold(
-              from: [],
-              over: data.patient_allergies,
-              with: fn(acc, old_allergy) {
-                let allergy_is_now = case old_allergy.id == updated_allergy.id {
-                  True -> updated_allergy
-                  False -> old_allergy
-                }
-                [allergy_is_now, ..acc]
-              },
-            )
-            |> list.reverse
+            data.patient_allergies
+            |> list.map(fn(old_allergy) {
+              case old_allergy.id == updated_allergy.id {
+                True -> updated_allergy
+                False -> old_allergy
+              }
+            })
           mm.PatientLoadFound(mm.PatientData(..data, patient_allergies:))
         }
         _ -> patient
       }
-      #(
-        Model(..model, route: mm.RoutePatient(id:, page:, patient: new_pat)),
-        effect.none(),
-      )
+      let model =
+        model
+        |> set_form_state(id:, patient: new_pat, formstate: mm.FormStateNone)
+      #(model, effect.none())
     }
   }
 }
 
-pub fn edit(model: Model, edit_allergy_id: String) {
-  echo "hi " <> edit_allergy_id
+pub fn edit(model: Model, edit_allergy_id: Option(String)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
     mm.RoutePatient(id: pat_id, patient:, page:) ->
       case patient {
         mm.PatientLoadFound(data) -> {
-          case
-            data.patient_allergies
-            |> list.find(fn(allergy) { allergy.id == Some(edit_allergy_id) })
-          {
-            Error(_) -> #(model, effect.none())
-            Ok(allergy) -> {
-              let allergy_form =
-                allergy_schema(allergy.patient, Some(allergy))
-                |> form.new
-                |> form.add_string(
-                  "note",
-                  utils.annotation_first_text(allergy.note),
-                )
-                |> form.add_string("criticality", case allergy.criticality {
-                  None -> ""
-                  Some(c) ->
-                    r4us_valuesets.allergyintolerancecriticality_to_string(c)
-                })
-                |> form.add_string("category", case allergy.category {
-                  [] -> ""
-                  [c, ..] ->
-                    r4us_valuesets.allergyintolerancecategory_to_string(c)
-                })
-                |> form.add_string("code", case allergy.code {
-                  None -> ""
-                  Some(cc) ->
-                    case cc.coding {
-                      [first, ..] -> option.unwrap(first.code, "")
-                      [] -> ""
-                    }
-                })
-                |> form.add_string("recorded_date", case allergy.recorded_date {
-                  None -> ""
-                  Some(rd) -> rd
-                })
-              let form_existing_allergy =
-                allergy_form
-                |> Some
-                |> mm.PatientAllergies
-              let route =
-                mm.RoutePatient(
-                  id: pat_id,
-                  patient:,
-                  page: form_existing_allergy,
-                )
-              let model = Model(..model, route:)
-              #(model, effect.none())
+          // click create new allergy -> form for new allergy, edit_allergy_id None
+          // click edit on allergy row -> form for existing allergy, with its id
+          case edit_allergy_id {
+            Some(edit_allergy_id) -> {
+              case
+                data.patient_allergies
+                |> list.find(fn(allergy) { allergy.id == Some(edit_allergy_id) })
+              {
+                Error(_) -> #(model, effect.none())
+                Ok(allergy) -> {
+                  allergy_schema(allergy)
+                  |> form.new
+                  |> form.add_string(
+                    "note",
+                    utils.annotation_first_text(allergy.note),
+                  )
+                  |> form.add_string("criticality", case allergy.criticality {
+                    None -> ""
+                    Some(c) ->
+                      r4us_valuesets.allergyintolerancecriticality_to_string(c)
+                  })
+                  |> form.add_string("category", case allergy.category {
+                    [] -> ""
+                    [c, ..] ->
+                      r4us_valuesets.allergyintolerancecategory_to_string(c)
+                  })
+                  |> form.add_string("code", case allergy.code {
+                    None -> ""
+                    Some(cc) ->
+                      case cc.coding {
+                        [first, ..] -> option.unwrap(first.code, "")
+                        [] -> ""
+                      }
+                  })
+                  |> form.add_string(
+                    "recorded_date",
+                    case allergy.recorded_date {
+                      None -> ""
+                      Some(rd) -> rd
+                    },
+                  )
+                  |> form_to_model(model, pat_id, patient)
+                }
+              }
+            }
+            None -> {
+              data.patient
+              |> utils.patient_to_reference
+              |> r4us.allergyintolerance_new
+              |> allergy_schema
+              |> form.new
+              |> form_to_model(model, pat_id, patient)
             }
           }
         }
         _ -> #(model, effect.none())
       }
   }
+}
+
+pub fn form_to_model(allergy_form, model, pat_id, patient) {
+  let allergy_form =
+    allergy_form
+    |> mm.FormStateSome
+    |> mm.PatientAllergies
+  let route = mm.RoutePatient(id: pat_id, patient:, page: allergy_form)
+  let model = Model(..model, route:)
+  #(model, effect.none())
 }
 
 pub fn submit(model: Model, form_allergy: r4us.Allergyintolerance) {
@@ -171,11 +177,20 @@ pub fn submit(model: Model, form_allergy: r4us.Allergyintolerance) {
             // allergyintolerance_update errors if allergy to update has no id,
             // but we just checked it has id, so that should never happen
           }
+          let model =
+            model
+            |> set_form_state(id:, patient:, formstate: mm.FormStateLoading)
           #(model, effect)
         }
         _ -> #(model, effect.none())
       }
   }
+}
+
+pub fn set_form_state(model model, id id, patient patient, formstate formstate) {
+  let allergy_form = mm.PatientAllergies(formstate)
+  let route = mm.RoutePatient(id:, patient:, page: allergy_form)
+  let model = Model(..model, route:)
 }
 
 pub fn form_errors(model: Model, err: Form(r4us.Allergyintolerance)) {
@@ -186,7 +201,7 @@ pub fn form_errors(model: Model, err: Form(r4us.Allergyintolerance)) {
         ..model,
         route: mm.RoutePatient(
           id:,
-          page: mm.PatientAllergies(Some(err)),
+          page: mm.PatientAllergies(mm.FormStateSome(err)),
           patient:,
         ),
       ),
@@ -195,10 +210,7 @@ pub fn form_errors(model: Model, err: Form(r4us.Allergyintolerance)) {
   }
 }
 
-pub fn allergy_schema(
-  patient_ref: r4us.Reference,
-  existing_allergy: Option(r4us.Allergyintolerance),
-) {
+pub fn allergy_schema(allergy: r4us.Allergyintolerance) {
   use note_text <- form.field("note", form.parse_string)
   let note = case note_text {
     "" -> []
@@ -242,15 +254,9 @@ pub fn allergy_schema(
     "recorded_date",
     form.parse_optional(form.parse_string),
   )
-
-  let update_allergy = case existing_allergy {
-    Some(a) -> a
-    None -> r4us.allergyintolerance_new(patient_ref)
-  }
-
   form.success(
     r4us.Allergyintolerance(
-      ..update_allergy,
+      ..allergy,
       note:,
       criticality:,
       category:,
@@ -262,13 +268,8 @@ pub fn allergy_schema(
 
 pub fn view(
   pat: mm.PatientData,
-  allergy_form: Option(Form(r4us.Allergyintolerance)),
+  allergy_form: mm.FormState(r4us.Allergyintolerance),
 ) {
-  let allergy_form = case allergy_form {
-    None ->
-      form.new(allergy_schema(utils.patient_to_reference(pat.patient), None))
-    Some(f) -> f
-  }
   let head =
     h.tr(
       [],
@@ -310,12 +311,9 @@ pub fn view(
               },
             ]),
             h.td([], [
-              h.button(
-                [event.on_click(mm.UserClickedAllergyRowEdit(allergy_id))],
-                [
-                  h.text("edit"),
-                ],
-              ),
+              h.button([event.on_click(mm.UserClickedEditAllergy(allergy_id))], [
+                h.text("edit"),
+              ]),
             ]),
           ])
       }
@@ -324,79 +322,92 @@ pub fn view(
     h.h1([a.class("text-xl font-bold p-4")], [
       h.text("Allergies and Intolerances"),
     ]),
+    h.button([event.on_click(mm.UserClickedCreateAllergy)], [
+      h.text("Create New Allergy/Intolerance"),
+    ]),
     h.table([a.class("border-separate border-spacing-4 m-4")], [
       h.thead([], [head]),
       h.tbody([], rows),
     ]),
-    h.form(
-      [
-        a.class("flex flex-row flex-wrap gap-2"),
-        event.on_submit(fn(values) {
-          allergy_form
-          |> form.add_values(values)
-          |> form.run
-          |> mm.UserSubmittedAllergyForm
-        }),
-      ],
-      [
-        view_form_coding_select(
-          allergy_form,
-          name: "code",
-          options: list.map(substancecodes.substance_codes, fn(entry) {
-            CodingOption(
-              code: entry.0,
-              display: entry.1,
-              system: "http://snomed.info/sct",
-            )
-          }),
-          label: "allergy",
-        ),
-        view_form_input(allergy_form, is: "text", name: "note", label: "note"),
-        view_form_input(
-          allergy_form,
-          is: "date",
-          name: "recorded_date",
-          label: "date recorded",
-        ),
-        view_form_select(
-          allergy_form,
-          name: "criticality",
-          options: list.map(
-            [
-              r4us_valuesets.AllergyintolerancecriticalityLow,
-              r4us_valuesets.AllergyintolerancecriticalityHigh,
-              r4us_valuesets.AllergyintolerancecriticalityUnabletoassess,
-            ],
-            r4us_valuesets.allergyintolerancecriticality_to_string,
-          ),
-          label: "criticality",
-        ),
-        view_form_select(
-          allergy_form,
-          name: "category",
-          options: list.map(
-            [
-              r4us_valuesets.AllergyintolerancecategoryFood,
-              r4us_valuesets.AllergyintolerancecategoryMedication,
-              r4us_valuesets.AllergyintolerancecategoryEnvironment,
-              r4us_valuesets.AllergyintolerancecategoryBiologic,
-            ],
-            r4us_valuesets.allergyintolerancecategory_to_string,
-          ),
-          label: "category",
-        ),
-        h.div([a.class("flex justify-end")], [
-          h.button(
-            [
-              a.class("text-white text-sm font-bold"),
-              a.class("px-4 py-2 bg-purple-600 rounded-lg"),
-              a.class("hover:bg-purple-800"),
-            ],
-            [h.text("Save New Allergy/Intolerance")],
-          ),
-        ]),
-      ],
-    ),
+    case allergy_form {
+      mm.FormStateNone -> element.none()
+      mm.FormStateLoading -> h.p([], [h.text("loading...")])
+      mm.FormStateSome(allergy_form) ->
+        h.form(
+          [
+            a.class("flex flex-row flex-wrap gap-4 max-w-2xl p-4"),
+            event.on_submit(fn(values) {
+              allergy_form
+              |> form.add_values(values)
+              |> form.run
+              |> mm.UserSubmittedAllergyForm
+            }),
+          ],
+          [
+            view_form_coding_select(
+              allergy_form,
+              name: "code",
+              options: list.map(substancecodes.substance_codes, fn(entry) {
+                CodingOption(
+                  code: entry.0,
+                  display: entry.1,
+                  system: "http://snomed.info/sct",
+                )
+              }),
+              label: "allergy",
+            ),
+            view_form_input(
+              allergy_form,
+              is: "text",
+              name: "note",
+              label: "note",
+            ),
+            view_form_input(
+              allergy_form,
+              is: "date",
+              name: "recorded_date",
+              label: "date recorded",
+            ),
+            view_form_select(
+              allergy_form,
+              name: "criticality",
+              options: list.map(
+                [
+                  r4us_valuesets.AllergyintolerancecriticalityLow,
+                  r4us_valuesets.AllergyintolerancecriticalityHigh,
+                  r4us_valuesets.AllergyintolerancecriticalityUnabletoassess,
+                ],
+                r4us_valuesets.allergyintolerancecriticality_to_string,
+              ),
+              label: "criticality",
+            ),
+            view_form_select(
+              allergy_form,
+              name: "category",
+              options: list.map(
+                [
+                  r4us_valuesets.AllergyintolerancecategoryFood,
+                  r4us_valuesets.AllergyintolerancecategoryMedication,
+                  r4us_valuesets.AllergyintolerancecategoryEnvironment,
+                  r4us_valuesets.AllergyintolerancecategoryBiologic,
+                ],
+                r4us_valuesets.allergyintolerancecategory_to_string,
+              ),
+              label: "category",
+            ),
+            h.div([a.class("w-full flex justify-end")], [
+              h.button(
+                [
+                  a.class("text-white text-sm font-bold"),
+                  a.class("px-4 py-2 bg-blue-600 rounded-lg"),
+                  a.class("hover:bg-blue-700"),
+                ],
+                [h.text("Save Allergy/Intolerance")],
+              ),
+            ]),
+          ],
+        )
+    },
   ]
 }
 
@@ -410,7 +421,7 @@ fn view_form_select(
   let current_value = form.field_value(form, name)
 
   h.div([], [
-    h.label([a.for(name), a.class("text-xs font-bold text-slate-600")], [
+    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
       h.text(label),
       h.text(": "),
     ]),
@@ -452,7 +463,7 @@ fn view_form_coding_select(
   let current_value = form.field_value(form, name)
 
   h.div([], [
-    h.label([a.for(name), a.class("text-xs font-bold text-slate-600")], [
+    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
       h.text(label),
       h.text(": "),
     ]),
@@ -493,7 +504,7 @@ fn view_form_input(
   let errors = form.field_error_messages(form, name)
 
   h.div([], [
-    h.label([a.for(name), a.class("text-xs font-bold text-slate-600")], [
+    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
       h.text(label),
       h.text(": "),
     ]),

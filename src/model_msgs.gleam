@@ -76,7 +76,7 @@ pub type PatientData {
 // in which case show not found view
 pub type RoutePatientPage {
   PatientOverview
-  PatientAllergies(form: Option(Form(r4us.Allergyintolerance)))
+  PatientAllergies(FormState(r4us.Allergyintolerance))
   PatientMedications
   PatientVitals
   PatientPhotos
@@ -89,6 +89,12 @@ pub type RouteNoId {
   Settings
   RegisterPatient(newpatient: Option(Form(r4us.Patient)))
   NotFound(notfound: String)
+}
+
+pub type FormState(a) {
+  FormStateNone
+  FormStateLoading
+  FormStateSome(Form(a))
 }
 
 pub fn href(route: Route) -> Attribute(msg) {
@@ -132,7 +138,7 @@ pub fn uri_to_route(uri: Uri) -> Route {
           RoutePatient(
             id:,
             patient: PatientLoadStillLoading,
-            page: PatientAllergies(None),
+            page: PatientAllergies(FormStateNone),
           )
         "medications" ->
           RoutePatient(
@@ -174,7 +180,8 @@ pub type Msg {
   UserSubmittedAllergyForm(
     Result(r4us.Allergyintolerance, Form(r4us.Allergyintolerance)),
   )
-  UserClickedAllergyRowEdit(String)
+  UserClickedCreateAllergy
+  UserClickedEditAllergy(String)
   ServerUpdatedPatientPhoto(Result(r4us.Patient, r4us_rsvp.Err))
   UserSelectedPhotoEvent(dynamic.Dynamic)
   UserSelectedPhotoDataUrl(String)

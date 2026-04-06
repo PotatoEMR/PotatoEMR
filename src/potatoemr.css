@@ -6,3 +6,7 @@ body,
     height: 100%;
     margin: 0;
 }
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}

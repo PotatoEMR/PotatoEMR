@@ -209,7 +209,8 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     mm.ServerUpdatedAllergy(Ok(alrgy)) -> allergy.server_updated(model, alrgy)
     mm.ServerUpdatedAllergy(Error(_)) -> todo
     mm.ServerDeletedAllergy(_) -> todo
-    mm.UserClickedAllergyRowEdit(id) -> allergy.edit(model, id)
+    mm.UserClickedCreateAllergy -> allergy.edit(model, None)
+    mm.UserClickedEditAllergy(id) -> allergy.edit(model, Some(id))
     mm.UserSubmittedAllergyForm(Ok(new_allergy)) ->
       allergy.submit(model, new_allergy)
     mm.UserSubmittedAllergyForm(Error(err)) -> allergy.form_errors(model, err)
@@ -368,7 +369,7 @@ fn view(model: Model) -> Element(Msg) {
               ],
               [
                 #(mm.PatientOverview, "Overview"),
-                #(mm.PatientAllergies(None), "Allergies"),
+                #(mm.PatientAllergies(mm.FormStateNone), "Allergies"),
                 #(mm.PatientMedications, "Medications"),
                 #(mm.PatientVitals, "Vitals"),
               ]
