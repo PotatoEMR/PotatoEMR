@@ -236,9 +236,7 @@ pub fn allergy_schema(allergy: r4us.Allergyintolerance) {
     Error(_) -> []
   }
   use type_str <- form.field("type_", form.parse_string)
-  let type_ = case
-    r4us_valuesets.allergyintolerancetype_from_string(type_str)
-  {
+  let type_ = case r4us_valuesets.allergyintolerancetype_from_string(type_str) {
     Ok(t) -> Some(t)
     Error(_) -> None
   }
@@ -306,9 +304,7 @@ pub fn view(
                 None -> element.none()
                 Some(t) ->
                   h.p([], [
-                    h.text(
-                      r4us_valuesets.allergyintolerancetype_to_string(t),
-                    ),
+                    h.text(r4us_valuesets.allergyintolerancetype_to_string(t)),
                   ])
               },
             ]),
@@ -335,9 +331,7 @@ pub fn view(
               },
             ]),
             h.td([], [
-              h.button([event.on_click(mm.UserClickedEditAllergy(allergy_id))], [
-                h.text("edit"),
-              ]),
+              btn("Edit", on_click: mm.UserClickedEditAllergy(allergy_id)),
             ]),
           ])
       }
@@ -346,9 +340,7 @@ pub fn view(
     h.h1([a.class("text-xl font-bold p-4")], [
       h.text("Allergies and Intolerances"),
     ]),
-    h.button([event.on_click(mm.UserClickedCreateAllergy)], [
-      h.text("Create New Allergy/Intolerance"),
-    ]),
+    btn("Create New Allergy/Intolerance", on_click: mm.UserClickedCreateAllergy),
     h.table([a.class("border-separate border-spacing-4 m-4")], [
       h.thead([], [head]),
       h.tbody([], rows),
@@ -432,19 +424,28 @@ pub fn view(
               label: "category",
             ),
             h.div([a.class("w-full flex justify-end")], [
-              h.button(
-                [
-                  a.class("text-white text-sm font-bold"),
-                  a.class("px-4 py-2 bg-blue-600 rounded-lg"),
-                  a.class("hover:bg-blue-700"),
-                ],
-                [h.text("Save Allergy/Intolerance")],
-              ),
+              btn_nomsg("Save Allergy/Intolerance"),
             ]),
           ],
         )
     },
   ]
+}
+
+fn btn_attrs() {
+  [
+    a.class("text-sm font-bold px-4 py-2 rounded-lg"),
+    a.class("border border-slate-600 text-slate-200 bg-slate-800"),
+    a.class("hover:bg-slate-700"),
+  ]
+}
+
+fn btn(label: String, on_click msg: msg) -> Element(msg) {
+  h.button([event.on_click(msg), ..btn_attrs()], [h.text(label)])
+}
+
+fn btn_nomsg(label: String) -> Element(msg) {
+  h.button(btn_attrs(), [h.text(label)])
 }
 
 fn view_form_select(
