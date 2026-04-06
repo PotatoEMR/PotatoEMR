@@ -92,6 +92,11 @@ pub fn edit(model: Model, edit_allergy_id: Option(String)) {
                     "note",
                     utils.annotation_first_text(allergy.note),
                   )
+                  |> form.add_string("type_", case allergy.type_ {
+                    None -> ""
+                    Some(t) ->
+                      r4us_valuesets.allergyintolerancetype_to_string(t)
+                  })
                   |> form.add_string("criticality", case allergy.criticality {
                     None -> ""
                     Some(c) ->
@@ -230,6 +235,13 @@ pub fn allergy_schema(allergy: r4us.Allergyintolerance) {
     Ok(c) -> [c]
     Error(_) -> []
   }
+  use type_str <- form.field("type_", form.parse_string)
+  let type_ = case
+    r4us_valuesets.allergyintolerancetype_from_string(type_str)
+  {
+    Ok(t) -> Some(t)
+    Error(_) -> None
+  }
   use code_str <- form.field("code", form.parse_string)
   let code = case
     list.find(substancecodes.substance_codes, fn(entry) { entry.0 == code_str })
@@ -258,6 +270,7 @@ pub fn allergy_schema(allergy: r4us.Allergyintolerance) {
     r4us.Allergyintolerance(
       ..allergy,
       note:,
+      type_:,
       criticality:,
       category:,
       code:,
@@ -273,7 +286,7 @@ pub fn view(
   let head =
     h.tr(
       [],
-      utils.th_list(["allergy", "criticality", "notes", "date_recorded"]),
+      utils.th_list(["allergy", "type", "criticality", "notes", "date_recorded"]),
     )
   let rows =
     list.map(pat.patient_allergies, fn(allergy) {
@@ -286,6 +299,17 @@ pub fn view(
                 None -> element.none()
                 Some(cc) ->
                   h.p([], [h.text(utils.codeableconcept_to_string(cc))])
+              },
+            ]),
+            h.td([], [
+              case allergy.type_ {
+                None -> element.none()
+                Some(t) ->
+                  h.p([], [
+                    h.text(
+                      r4us_valuesets.allergyintolerancetype_to_string(t),
+                    ),
+                  ])
               },
             ]),
             h.td([], [
@@ -367,6 +391,18 @@ pub fn view(
               is: "date",
               name: "recorded_date",
               label: "date recorded",
+            ),
+            view_form_select(
+              allergy_form,
+              name: "type_",
+              options: list.map(
+                [
+                  r4us_valuesets.AllergyintolerancetypeAllergy,
+                  r4us_valuesets.AllergyintolerancetypeIntolerance,
+                ],
+                r4us_valuesets.allergyintolerancetype_to_string,
+              ),
+              label: "type",
             ),
             view_form_select(
               allergy_form,
