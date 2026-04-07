@@ -243,116 +243,107 @@ const nav_bar_class = "flex items-end space-x-1 px-2 h-10 bg-slate-800 border-b 
 
 fn view(model: Model) -> Element(Msg) {
   h.div([a.class("w-full min-h-screen flex flex-col bg-slate-900 text-white")], [
-    h.nav([], [
-        h.ul([a.class(nav_bar_class)], [
-          h.li([a.class("relative")], [
-            h.input([
-              a.class("border border-slate-700"),
-              a.placeholder("search name"),
-              event.on_focus(mm.UserFocusedSearch),
-              event.on_blur(mm.UserBlurredSearch),
-              event.debounce(event.on_input(mm.UserSearchedPatient), 200),
-            ]),
-            case model.search.visible {
-              False -> element.none()
-              True ->
-                h.div(
-                  [
-                    a.class(
-                      "absolute top-full left-0 bg-zinc-800 w-2xl h-120 overflow-auto z-50",
-                    ),
-                    event.prevent_default(event.on_mouse_down(
-                      mm.UserFocusedSearch,
-                    )),
-                  ],
-                  case model.search.results {
-                    mm.SearchPatientResultsErrMsg(err_msg:) -> [
-                      h.p([a.class("red-300")], [h.text(err_msg)]),
-                    ]
-                    mm.SearchPatientResultsLoadingMsg -> [h.text("loading...")]
-                    mm.SearchPatientResultsEmptyMsg -> [h.text("empty")]
-                    mm.SearchPatientResultsPats(pats:) ->
-                      case pats {
-                        [] -> [h.p([], [h.text("no patients found")])]
-                        pats ->
-                          list.map(pats, fn(pat) {
-                            case pat.id {
-                              None -> element.none()
-                              Some(id) -> {
-                                let photo_src =
-                                  pat.photo
-                                  |> list.find_map(utils.get_img_src)
-                                  |> result.unwrap(patient_photo_placeholder)
-                                let name =
-                                  utils.humannames_to_single_name_string(pat.name)
-                                let gender = case pat.gender {
-                                  None -> ""
-                                  Some(g) ->
-                                    r4us_valuesets.administrativegender_to_string(
-                                      g,
-                                    )
-                                }
-                                let age = case pat.birth_date {
-                                  None -> ""
-                                  Some(bd) -> bd
-                                }
-                                let identifier = case pat.identifier {
-                                  [] -> ""
-                                  [first, ..] ->
-                                    option.unwrap(first.value, "")
-                                }
-                                let detail =
-                                  [gender, age, identifier]
-                                  |> list.filter(fn(s) { s != "" })
-                                  |> string.join(" \u{00B7} ")
-                                h.a(
-                                  [
-                                    href(mm.RoutePatient(
-                                      id,
-                                      mm.PatientLoadStillLoading,
-                                      mm.PatientOverview,
-                                    )),
-                                    a.class(
-                                      "flex items-center gap-3 p-4 hover:bg-zinc-700",
-                                    ),
-                                  ],
-                                  [
-                                    h.img([
-                                      a.src(photo_src),
-                                      a.class(
-                                        "w-20 h-20 rounded-full object-cover",
-                                      ),
-                                    ]),
-                                    h.div([], [
-                                      h.p([a.class("font-bold")], [
-                                        h.text(name),
-                                      ]),
-                                      h.p(
-                                        [a.class("text-sm text-slate-400")],
-                                        [h.text(detail)],
-                                      ),
-                                    ]),
-                                  ],
-                                )
-                              }
-                            }
-                          })
-                      }
-                  },
-                )
-            },
-          ]),
-          ..view_header_links(
-            [
-              #(mm.Index, "Home"),
-              #(mm.Settings, "Settings"),
-              #(mm.RegisterPatient(None), "Register New Patient"),
-            ],
-            current: model.route,
-          )
+    h.nav([a.class(nav_bar_class)], [
+      h.div([a.class("relative")], [
+        h.input([
+          a.class(
+            "w-lg h-8 m-1 pl-4 rounded-full border border-slate-700 bg-slate-950 focus:outline focus:outline-purple-600",
+          ),
+          a.placeholder("⌕ search patient name"),
+          event.on_focus(mm.UserFocusedSearch),
+          event.on_blur(mm.UserBlurredSearch),
+          event.debounce(event.on_input(mm.UserSearchedPatient), 200),
         ]),
-      ],
-    ),
+        case model.search.visible {
+          False -> element.none()
+          True ->
+            h.div(
+              [
+                a.class(
+                  "absolute top-full left-0 -mt-1 bg-slate-800 border border-slate-700 w-3xl h-120 overflow-auto z-50",
+                ),
+                event.prevent_default(event.on_mouse_down(mm.UserFocusedSearch)),
+              ],
+              case model.search.results {
+                mm.SearchPatientResultsErrMsg(err_msg:) -> [
+                  h.p([a.class("red-300")], [h.text(err_msg)]),
+                ]
+                mm.SearchPatientResultsLoadingMsg -> [h.text("loading...")]
+                mm.SearchPatientResultsEmptyMsg -> [h.text("empty")]
+                mm.SearchPatientResultsPats(pats:) ->
+                  case pats {
+                    [] -> [h.p([], [h.text("no patients found")])]
+                    pats ->
+                      list.map(pats, fn(pat) {
+                        case pat.id {
+                          None -> element.none()
+                          Some(id) -> {
+                            let photo_src =
+                              pat.photo
+                              |> list.find_map(utils.get_img_src)
+                              |> result.unwrap(patient_photo_placeholder)
+                            let name =
+                              utils.humannames_to_single_name_string(pat.name)
+                            let gender = case pat.gender {
+                              None -> ""
+                              Some(g) ->
+                                r4us_valuesets.administrativegender_to_string(g)
+                            }
+                            let age = case pat.birth_date {
+                              None -> ""
+                              Some(bd) -> bd
+                            }
+                            let identifier = case pat.identifier {
+                              [] -> ""
+                              [first, ..] -> option.unwrap(first.value, "")
+                            }
+                            let detail =
+                              [gender, age, identifier]
+                              |> list.filter(fn(s) { s != "" })
+                              |> string.join(" \u{00B7} ")
+                            h.a(
+                              [
+                                href(mm.RoutePatient(
+                                  id,
+                                  mm.PatientLoadStillLoading,
+                                  mm.PatientOverview,
+                                )),
+                                a.class(
+                                  "flex items-center gap-3 p-4 hover:bg-slate-900",
+                                ),
+                              ],
+                              [
+                                h.img([
+                                  a.src(photo_src),
+                                  a.class("w-20 h-20 rounded-full object-cover"),
+                                ]),
+                                h.div([], [
+                                  h.p([a.class("font-bold")], [
+                                    h.text(name),
+                                  ]),
+                                  h.p([a.class("text-sm text-slate-400")], [
+                                    h.text(detail),
+                                  ]),
+                                ]),
+                              ],
+                            )
+                          }
+                        }
+                      })
+                  }
+              },
+            )
+        },
+      ]),
+      ..view_header_links(
+        [
+          #(mm.Index, "Home"),
+          #(mm.Settings, "Settings"),
+          #(mm.RegisterPatient(None), "Register New Patient"),
+        ],
+        current: model.route,
+      )
+    ]),
     case model.route {
       mm.RouteNoId(route) ->
         h.main([a.class("my-16 flex-1")], case route {
@@ -458,8 +449,7 @@ fn view_header_link(
   current current: Route,
   label text: String,
 ) -> Element(msg) {
-  let active =
-    mm.route_to_urlstring(current) == mm.route_to_urlstring(target)
+  let active = mm.route_to_urlstring(current) == mm.route_to_urlstring(target)
 
   h.li([a.class("flex -mb-px")], [
     h.a(
