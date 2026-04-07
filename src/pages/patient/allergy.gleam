@@ -1,3 +1,7 @@
+import components.{
+  CodingOption, btn, btn_nomsg, view_form_coding_select, view_form_input,
+  view_form_select, view_form_textarea,
+}
 import fhir/r4us
 import fhir/r4us_rsvp
 import fhir/r4us_valuesets
@@ -15,10 +19,6 @@ import terminology/substancecodes
 import utils
 import utils2
 
-pub type CodingOption {
-  CodingOption(code: String, display: String, system: String)
-}
-
 pub fn server_created(
   model: Model,
   allergy: r4us.Allergyintolerance,
@@ -28,7 +28,7 @@ pub fn server_created(
     mm.RoutePatient(id:, page:, patient:) -> {
       let new_pat = case patient {
         mm.PatientLoadFound(data:) -> {
-          let patient_allergies = [allergy, ..data.patient_allergies]
+          let patient_allergies = list.append(data.patient_allergies, [allergy])
           mm.PatientLoadFound(mm.PatientData(..data, patient_allergies:))
         }
         _ -> patient
@@ -200,6 +200,47 @@ pub fn set_form_state(model model, id id, patient patient, formstate formstate) 
   let model = Model(..model, route:)
 }
 
+pub fn delete(model: Model, allergy_id: String) {
+  case model.route {
+    mm.RouteNoId(_) -> #(model, effect.none())
+    mm.RoutePatient(id:, patient:, page:) ->
+      case patient {
+        mm.PatientLoadFound(data) -> {
+          case
+            data.patient_allergies
+            |> list.find(fn(a) { a.id == Some(allergy_id) })
+          {
+            Error(_) -> #(model, effect.none())
+            Ok(allergy) -> {
+              let eff =
+                r4us_rsvp.allergyintolerance_delete(
+                  allergy,
+                  model.client,
+                  mm.ServerDeletedAllergy,
+                )
+                |> result.unwrap(effect.none())
+              let patient_allergies =
+                data.patient_allergies
+                |> list.filter(fn(a) { a.id != Some(allergy_id) })
+              let new_pat =
+                mm.PatientLoadFound(mm.PatientData(..data, patient_allergies:))
+              #(
+                model
+                  |> set_form_state(
+                    id:,
+                    patient: new_pat,
+                    formstate: mm.FormStateNone,
+                  ),
+                eff,
+              )
+            }
+          }
+        }
+        _ -> #(model, effect.none())
+      }
+  }
+}
+
 pub fn close_form(model: Model) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
@@ -296,22 +337,22 @@ pub fn view(
   let head =
     h.tr(
       [],
-      utils.th_list(["allergy", "type", "criticality", "notes", "date_recorded"]),
+      utils.th_list(["allergy", "type", "criticality", "notes", "date recorded", ""]),
     )
   let rows =
     list.map(pat.patient_allergies, fn(allergy) {
       case allergy.id {
         None -> element.none()
         Some(allergy_id) ->
-          h.tr([], [
-            h.td([], [
+          h.tr([a.class("border-b border-slate-700")], [
+            h.td([a.class("p-2")], [
               case allergy.code {
                 None -> element.none()
                 Some(cc) ->
                   h.p([], [h.text(utils.codeableconcept_to_string(cc))])
               },
             ]),
-            h.td([], [
+            h.td([a.class("p-2")], [
               case allergy.type_ {
                 None -> element.none()
                 Some(t) ->
@@ -320,7 +361,7 @@ pub fn view(
                   ])
               },
             ]),
-            h.td([], [
+            h.td([a.class("p-2")], [
               case allergy.criticality {
                 None -> element.none()
                 Some(crit) ->
@@ -333,271 +374,142 @@ pub fn view(
                   ])
               },
             ]),
-            h.td([], [
+            h.td([a.class("p-2 max-w-xs truncate")], [
               h.text(utils.annotation_first_text(allergy.note)),
             ]),
-            h.td([], [
+            h.td([a.class("p-2")], [
               case allergy.recorded_date {
                 None -> element.none()
                 Some(rd) -> h.text(rd)
               },
             ]),
-            h.td([], [
+            h.td([a.class("p-2 flex gap-2")], [
               btn("Edit", on_click: mm.UserClickedEditAllergy(allergy_id)),
+              btn("Delete", on_click: mm.UserClickedDeleteAllergy(allergy_id)),
             ]),
           ])
       }
     })
   [
     h.div([a.class("p-4 max-w-4xl")], [
-      h.div([a.class("flex items-center gap-4")], [
+      h.div([a.class("flex items-center gap-4 mb-4")], [
         h.h1([a.class("text-xl font-bold")], [
           h.text("Allergies and Intolerances"),
         ]),
-        btn("Create New Allergy/Intolerance", on_click: mm.UserClickedCreateAllergy),
+        btn(
+          "Create New Allergy/Intolerance",
+          on_click: mm.UserClickedCreateAllergy,
+        ),
       ]),
-      h.table([a.class("border-separate border-spacing-4")], [
-      h.thead([], [head]),
-      h.tbody([], rows),
-    ]),
-    case allergy_form {
-      mm.FormStateNone -> element.none()
-      mm.FormStateLoading -> h.p([], [h.text("loading...")])
-      mm.FormStateSome(allergy_form) -> {
-        let legend_text = case form.field_value(allergy_form, "id") {
-          "" -> "Create Allergy/Intolerance"
-          _ -> {
-            let code = form.field_value(allergy_form, "code")
-            let display =
-              substancecodes.substance_codes
-              |> list.find(fn(entry) { entry.0 == code })
-              |> result.map(fn(entry) { entry.1 })
-              |> result.unwrap(code)
-            "Edit " <> display
+      h.table([a.class("border-collapse border border-slate-700")], [
+        h.thead([], [head]),
+        h.tbody([], rows),
+      ]),
+      case allergy_form {
+        mm.FormStateNone -> element.none()
+        mm.FormStateLoading -> h.p([], [h.text("loading...")])
+        mm.FormStateSome(allergy_form) -> {
+          let legend_text = case form.field_value(allergy_form, "id") {
+            "" -> "Create Allergy/Intolerance"
+            _ -> {
+              let code = form.field_value(allergy_form, "code")
+              let display =
+                substancecodes.substance_codes
+                |> list.find(fn(entry) { entry.0 == code })
+                |> result.map(fn(entry) { entry.1 })
+                |> result.unwrap(code)
+              "Edit " <> display
+            }
           }
+          h.form(
+            [
+              a.class("max-w-2xl"),
+              event.on_submit(fn(values) {
+                allergy_form
+                |> form.add_values(values)
+                |> form.run
+                |> mm.UserSubmittedAllergyForm
+              }),
+            ],
+            [
+              h.fieldset(
+                [
+                  a.class(
+                    "border border-slate-700 rounded-lg p-4 flex flex-row flex-wrap gap-4",
+                  ),
+                ],
+                [
+                  h.legend([a.class("px-2 text-sm font-bold text-slate-200")], [
+                    h.text(legend_text),
+                  ]),
+                  view_form_coding_select(
+                    allergy_form,
+                    name: "code",
+                    options: list.map(substancecodes.substance_codes, fn(entry) {
+                      CodingOption(
+                        code: entry.0,
+                        display: entry.1,
+                        system: "http://snomed.info/sct",
+                      )
+                    }),
+                    label: "allergy",
+                  ),
+                  view_form_textarea(allergy_form, name: "note", label: "note"),
+                  view_form_input(
+                    allergy_form,
+                    is: "date",
+                    name: "recorded_date",
+                    label: "date recorded",
+                  ),
+                  view_form_select(
+                    allergy_form,
+                    name: "type_",
+                    options: list.map(
+                      [
+                        r4us_valuesets.AllergyintolerancetypeAllergy,
+                        r4us_valuesets.AllergyintolerancetypeIntolerance,
+                      ],
+                      r4us_valuesets.allergyintolerancetype_to_string,
+                    ),
+                    label: "type",
+                  ),
+                  view_form_select(
+                    allergy_form,
+                    name: "criticality",
+                    options: list.map(
+                      [
+                        r4us_valuesets.AllergyintolerancecriticalityLow,
+                        r4us_valuesets.AllergyintolerancecriticalityHigh,
+                        r4us_valuesets.AllergyintolerancecriticalityUnabletoassess,
+                      ],
+                      r4us_valuesets.allergyintolerancecriticality_to_string,
+                    ),
+                    label: "criticality",
+                  ),
+                  view_form_select(
+                    allergy_form,
+                    name: "category",
+                    options: list.map(
+                      [
+                        r4us_valuesets.AllergyintolerancecategoryFood,
+                        r4us_valuesets.AllergyintolerancecategoryMedication,
+                        r4us_valuesets.AllergyintolerancecategoryEnvironment,
+                        r4us_valuesets.AllergyintolerancecategoryBiologic,
+                      ],
+                      r4us_valuesets.allergyintolerancecategory_to_string,
+                    ),
+                    label: "category",
+                  ),
+                  h.div([a.class("w-full flex justify-end gap-2")], [
+                    btn("Cancel", on_click: mm.UserClickedCloseAllergyForm),
+                    btn_nomsg("Save Allergy/Intolerance"),
+                  ]),
+                ],
+              ),
+            ],
+          )
         }
-        h.form(
-          [
-            a.class("max-w-2xl"),
-            event.on_submit(fn(values) {
-              allergy_form
-              |> form.add_values(values)
-              |> form.run
-              |> mm.UserSubmittedAllergyForm
-            }),
-          ],
-          [
-            h.fieldset(
-              [a.class("border border-slate-600 rounded-lg p-4 flex flex-row flex-wrap gap-4")],
-              [
-                h.legend([a.class("px-2 text-sm font-bold text-slate-200")], [
-                  h.text(legend_text),
-                ]),
-                view_form_coding_select(
-                  allergy_form,
-                  name: "code",
-                  options: list.map(substancecodes.substance_codes, fn(entry) {
-                    CodingOption(
-                      code: entry.0,
-                      display: entry.1,
-                      system: "http://snomed.info/sct",
-                    )
-                  }),
-                  label: "allergy",
-                ),
-                view_form_input(
-                  allergy_form,
-                  is: "text",
-                  name: "note",
-                  label: "note",
-                ),
-                view_form_input(
-                  allergy_form,
-                  is: "date",
-                  name: "recorded_date",
-                  label: "date recorded",
-                ),
-                view_form_select(
-                  allergy_form,
-                  name: "type_",
-                  options: list.map(
-                    [
-                      r4us_valuesets.AllergyintolerancetypeAllergy,
-                      r4us_valuesets.AllergyintolerancetypeIntolerance,
-                    ],
-                    r4us_valuesets.allergyintolerancetype_to_string,
-                  ),
-                  label: "type",
-                ),
-                view_form_select(
-                  allergy_form,
-                  name: "criticality",
-                  options: list.map(
-                    [
-                      r4us_valuesets.AllergyintolerancecriticalityLow,
-                      r4us_valuesets.AllergyintolerancecriticalityHigh,
-                      r4us_valuesets.AllergyintolerancecriticalityUnabletoassess,
-                    ],
-                    r4us_valuesets.allergyintolerancecriticality_to_string,
-                  ),
-                  label: "criticality",
-                ),
-                view_form_select(
-                  allergy_form,
-                  name: "category",
-                  options: list.map(
-                    [
-                      r4us_valuesets.AllergyintolerancecategoryFood,
-                      r4us_valuesets.AllergyintolerancecategoryMedication,
-                      r4us_valuesets.AllergyintolerancecategoryEnvironment,
-                      r4us_valuesets.AllergyintolerancecategoryBiologic,
-                    ],
-                    r4us_valuesets.allergyintolerancecategory_to_string,
-                  ),
-                  label: "category",
-                ),
-                h.div([a.class("w-full flex justify-end gap-2")], [
-                  btn("Cancel", on_click: mm.UserClickedCloseAllergyForm),
-                  btn_nomsg("Save Allergy/Intolerance"),
-                ]),
-              ],
-            ),
-          ],
-        )
-      }
-    },
-    ]),
-  ]
-}
-
-fn btn_attrs() {
-  [
-    a.class("text-sm font-bold px-4 py-2 rounded-lg cursor-pointer"),
-    a.class("border border-slate-600 text-slate-200 bg-slate-800"),
-    a.class("hover:bg-slate-700"),
-  ]
-}
-
-fn btn(label: String, on_click msg: msg) -> Element(msg) {
-  h.button([event.on_click(msg), ..btn_attrs()], [h.text(label)])
-}
-
-fn btn_nomsg(label: String) -> Element(msg) {
-  h.button(btn_attrs(), [h.text(label)])
-}
-
-fn view_form_select(
-  form: Form(a),
-  name name: String,
-  options options: List(String),
-  label label: String,
-) {
-  let errors = form.field_error_messages(form, name)
-  let current_value = form.field_value(form, name)
-
-  h.div([], [
-    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
-      h.text(label),
-      h.text(": "),
-    ]),
-    h.select(
-      [
-        a.class("border border-slate-700 bg-slate-950"),
-        case errors {
-          [] -> a.class("focus:outline focus:outline-purple-600")
-          _ -> a.class("outline outline-red-500")
-        },
-        a.id(name),
-        a.name(name),
-      ],
-      [
-        h.option([a.value(""), a.selected(current_value == "")], "----"),
-        ..list.map(options, fn(option) {
-          h.option(
-            [a.value(option), a.selected(current_value == option)],
-            option,
-          )
-        })
-      ],
-    ),
-    ..list.map(errors, fn(error_message) {
-      h.p([a.class("mt-0.5 text-xs text-red-500")], [
-        h.text(error_message),
-      ])
-    })
-  ])
-}
-
-fn view_form_coding_select(
-  form: Form(a),
-  name name: String,
-  options options: List(CodingOption),
-  label label: String,
-) {
-  let errors = form.field_error_messages(form, name)
-  let current_value = form.field_value(form, name)
-
-  h.div([], [
-    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
-      h.text(label),
-      h.text(": "),
-    ]),
-    h.select(
-      [
-        a.class("border border-slate-700 bg-slate-950"),
-        case errors {
-          [] -> a.class("focus:outline focus:outline-purple-600")
-          _ -> a.class("outline outline-red-500")
-        },
-        a.id(name),
-        a.name(name),
-      ],
-      [
-        h.option([a.value(""), a.selected(current_value == "")], "----"),
-        ..list.map(options, fn(option) {
-          h.option(
-            [a.value(option.code), a.selected(current_value == option.code)],
-            option.display,
-          )
-        })
-      ],
-    ),
-    ..list.map(errors, fn(error_message) {
-      h.p([a.class("mt-0.5 text-xs text-red-500")], [
-        h.text(error_message),
-      ])
-    })
-  ])
-}
-
-fn view_form_input(
-  form: Form(a),
-  is type_: String,
-  name name: String,
-  label label: String,
-) -> Element(msg) {
-  let errors = form.field_error_messages(form, name)
-
-  h.div([], [
-    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
-      h.text(label),
-      h.text(": "),
-    ]),
-    h.input([
-      a.type_(type_),
-      a.class("border border-slate-700 bg-slate-950"),
-      case errors {
-        [] -> a.class("focus:outline focus:outline-purple-600")
-        _ -> a.class("outline outline-red-500")
       },
-      a.id(name),
-      a.name(name),
-      a.value(form.field_value(form, name)),
     ]),
-    ..list.map(errors, fn(error_message) {
-      h.p([a.class("mt-0.5 text-xs text-red-500")], [
-        h.text(error_message),
-      ])
-    })
-  ])
+  ]
 }

@@ -3,6 +3,7 @@ import fhir/r4us_rsvp
 import fhir/r4us_sansio
 import fhir/r4us_valuesets
 import formal/form.{type Form}
+import gleam/dict
 import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/int
@@ -77,7 +78,7 @@ pub type PatientData {
 pub type RoutePatientPage {
   PatientOverview
   PatientAllergies(FormState(r4us.Allergyintolerance))
-  PatientMedications
+  PatientOrders
   PatientVitals
   PatientPhotos
 }
@@ -110,55 +111,45 @@ pub fn route_to_urlstring(route: Route) -> String {
         RegisterPatient(_) -> "/registerpatient"
         NotFound(_) -> "/404"
       }
-    RoutePatient(_patient, id:, page:) ->
-      case page {
-        PatientOverview -> "/patient/" <> id <> "/overview"
-        PatientAllergies(_) -> "/patient/" <> id <> "/allergies"
-        PatientMedications -> "/patient/" <> id <> "/medications"
-        PatientVitals -> "/patient/" <> id <> "/vitals"
-        PatientPhotos -> "/patient/" <> id <> "/photos"
+    RoutePatient(_patient, id:, page:) -> {
+      let ending = case page {
+        PatientOverview -> "overview"
+        PatientAllergies(_) -> "allergies"
+        PatientOrders -> "orders"
+        PatientVitals -> "vitals"
+        PatientPhotos -> "photos"
       }
+      "/patient/" <> id <> "/" <> ending
+    }
   }
 }
 
+pub const pages_no_id: List(#(String, RouteNoId)) = [
+  #("", Index),
+  #("settings", Settings),
+  #("registerpatient", RegisterPatient(None)),
+]
+
+pub const pages_patient: List(#(String, RoutePatientPage)) = [
+  #("overview", PatientOverview),
+  #("allergies", PatientAllergies(FormStateNone)),
+  #("orders", PatientOrders),
+  #("vitals", PatientVitals),
+  #("photos", PatientPhotos),
+]
+
 pub fn uri_to_route(uri: Uri) -> Route {
   case uri.path_segments(uri.path) {
-    [] | [""] -> RouteNoId(Index)
-    ["settings"] -> RouteNoId(Settings)
-    ["registerpatient"] -> RouteNoId(RegisterPatient(None))
+    [] -> RouteNoId(Index)
+    [page] ->
+      case pages_no_id |> dict.from_list |> dict.get(page) {
+        Ok(page) -> RouteNoId(page:)
+        Error(_) -> uri |> uri.to_string |> NotFound |> RouteNoId
+      }
     ["patient", id, page] ->
-      case page {
-        "overview" ->
-          RoutePatient(
-            id:,
-            patient: PatientLoadStillLoading,
-            page: PatientOverview,
-          )
-        "allergies" ->
-          RoutePatient(
-            id:,
-            patient: PatientLoadStillLoading,
-            page: PatientAllergies(FormStateNone),
-          )
-        "medications" ->
-          RoutePatient(
-            id:,
-            patient: PatientLoadStillLoading,
-            page: PatientMedications,
-          )
-        "vitals" ->
-          RoutePatient(
-            id:,
-            patient: PatientLoadStillLoading,
-            page: PatientVitals,
-          )
-        "photos" ->
-          RoutePatient(
-            id:,
-            patient: PatientLoadStillLoading,
-            page: PatientPhotos,
-          )
-        _ -> uri |> uri.to_string |> NotFound |> RouteNoId
+      case pages_patient |> dict.from_list |> dict.get(page) {
+        Ok(page) -> RoutePatient(id:, patient: PatientLoadStillLoading, page:)
+        Error(_) -> uri |> uri.to_string |> NotFound |> RouteNoId
       }
     _ -> uri |> uri.to_string |> NotFound |> RouteNoId
   }
@@ -182,6 +173,7 @@ pub type Msg {
   )
   UserClickedCreateAllergy
   UserClickedEditAllergy(String)
+  UserClickedDeleteAllergy(String)
   UserClickedCloseAllergyForm
   ServerUpdatedPatientPhoto(Result(r4us.Patient, r4us_rsvp.Err))
   UserSelectedPhotoEvent(dynamic.Dynamic)

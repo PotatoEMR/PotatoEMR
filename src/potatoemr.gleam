@@ -15,10 +15,10 @@ import lustre/element/html as h
 import lustre/event
 import model_msgs.{type Model, type Msg, type Route, Model, href} as mm
 import modem
-import pages/general/index
-import pages/general/notfound
-import pages/general/registerpatient
-import pages/general/settings
+import pages/no_id/index
+import pages/no_id/notfound
+import pages/no_id/registerpatient
+import pages/no_id/settings
 import pages/patient/allergy
 import pages/patient/medication
 import pages/patient/overview
@@ -211,9 +211,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     mm.ServerCreatedAllergy(Error(_)) -> todo
     mm.ServerUpdatedAllergy(Ok(alrgy)) -> allergy.server_updated(model, alrgy)
     mm.ServerUpdatedAllergy(Error(_)) -> todo
-    mm.ServerDeletedAllergy(_) -> todo
+    mm.ServerDeletedAllergy(_) -> #(model, effect.none())
     mm.UserClickedCreateAllergy -> allergy.edit(model, None)
     mm.UserClickedEditAllergy(id) -> allergy.edit(model, Some(id))
+    mm.UserClickedDeleteAllergy(id) -> allergy.delete(model, id)
     mm.UserClickedCloseAllergyForm -> allergy.close_form(model)
     mm.UserSubmittedAllergyForm(Ok(new_allergy)) ->
       allergy.submit(model, new_allergy)
@@ -335,14 +336,16 @@ fn view(model: Model) -> Element(Msg) {
             )
         },
       ]),
-      ..view_header_links(
-        [
-          #(mm.Index, "Home"),
-          #(mm.Settings, "Settings"),
-          #(mm.RegisterPatient(None), "Register New Patient"),
-        ],
-        current: model.route,
-      )
+      ..{
+        mm.pages_no_id
+        |> list.map(fn(link) {
+          view_header_link(
+            current: model.route,
+            to: mm.RouteNoId(link.1),
+            label: link.0,
+          )
+        })
+      }
     ]),
     case model.route {
       mm.RouteNoId(route) ->
@@ -397,17 +400,13 @@ fn view(model: Model) -> Element(Msg) {
           h.div([a.class("flex-1")], [
             h.ul(
               [a.class(nav_bar_class)],
-              [
-                #(mm.PatientOverview, "Overview"),
-                #(mm.PatientAllergies(mm.FormStateNone), "Allergies"),
-                #(mm.PatientMedications, "Medications"),
-                #(mm.PatientVitals, "Vitals"),
-              ]
+              mm.pages_patient
+                |> list.filter(fn(x) { x.1 != mm.PatientPhotos })
                 |> list.map(fn(link) {
                   view_header_link(
                     current: model.route,
-                    to: mm.RoutePatient(id, mm.PatientLoadStillLoading, link.0),
-                    label: link.1,
+                    to: mm.RoutePatient(id, mm.PatientLoadStillLoading, link.1),
+                    label: link.0,
                   )
                 }),
             ),
@@ -423,7 +422,7 @@ fn view(model: Model) -> Element(Msg) {
                   mm.PatientOverview -> overview.view(data)
                   mm.PatientAllergies(allergy_form) ->
                     allergy.view(data, allergy_form)
-                  mm.PatientMedications -> medication.view(data)
+                  mm.PatientOrders -> medication.view(data)
                   mm.PatientVitals -> vitals.view(data)
                   mm.PatientPhotos -> photo.view(model, data)
                 })
@@ -433,15 +432,6 @@ fn view(model: Model) -> Element(Msg) {
         ])
     },
   ])
-}
-
-fn view_header_links(
-  current current,
-  to targets_and_displays: List(#(mm.RouteNoId, String)),
-) {
-  list.map(targets_and_displays, fn(link) {
-    view_header_link(to: mm.RouteNoId(link.0), current:, label: link.1)
-  })
 }
 
 fn view_header_link(
@@ -456,7 +446,10 @@ fn view_header_link(
       [
         href(target),
         a.classes([
-          #("flex items-center px-3 py-1 rounded-t-2xl border-x border-t underline", True),
+          #(
+            "flex items-center px-3 py-1 rounded-t-2xl border-x border-t underline",
+            True,
+          ),
           #("hover:text-slate-300 border-transparent", !active),
           #("bg-[#0f172b] border-slate-700", active),
         ]),

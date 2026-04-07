@@ -16,7 +16,6 @@ import lustre/element/html as h
 import lustre/element/svg
 import lustre/event
 import model_msgs.{type Model, type Msg, Model} as mm
-import pages/general/registerpatient
 import utils
 import utils2
 

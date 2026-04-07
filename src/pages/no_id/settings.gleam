@@ -9,7 +9,6 @@ import lustre/element/html as h
 import lustre/element/svg
 import lustre/event
 import model_msgs.{type Model, type Msg, Model} as mm
-import pages/general/registerpatient
 
 pub fn switch_client(model: Model, baseurl: String) -> #(Model, Effect(a)) {
   let client = r4us_rsvp.fhirclient_new(baseurl)

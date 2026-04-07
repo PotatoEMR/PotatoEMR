@@ -87,7 +87,7 @@ pub fn opt_elt(
 }
 
 pub fn th(s) {
-  h.th([], [h.text(s)])
+  h.th([a.class("p-2 text-left")], [h.text(s)])
 }
 
 pub fn th_list(s) {
