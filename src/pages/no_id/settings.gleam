@@ -10,7 +10,13 @@ import lustre/element/svg
 import lustre/event
 import model_msgs.{type Model, type Msg, Model} as mm
 
-pub fn switch_client(model: Model, baseurl: String) -> #(Model, Effect(a)) {
+pub fn update(msg, model) {
+  case msg {
+    mm.UserClickedChangeClient(baseurl) -> switch_client(model, baseurl)
+  }
+}
+
+pub fn switch_client(model: Model, baseurl: String) {
   let client = r4us_rsvp.fhirclient_new(baseurl)
   case client {
     Ok(client) -> #(Model(..model, client:), effect.none())
@@ -18,7 +24,7 @@ pub fn switch_client(model: Model, baseurl: String) -> #(Model, Effect(a)) {
   }
 }
 
-pub fn view(model: Model) -> List(Element(Msg)) {
+pub fn view(model: Model) {
   let current_url = uri.to_string(model.client.baseurl)
   echo current_url
   let servers = [

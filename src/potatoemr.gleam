@@ -1,8 +1,6 @@
-import fhir/r4us
 import fhir/r4us_rsvp
 import fhir/r4us_sansio
 import fhir/r4us_valuesets
-import formal/form.{type Form}
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/result
@@ -75,8 +73,10 @@ fn init(_) -> #(Model, Effect(Msg)) {
   let dropzone_effect =
     effect.from(fn(dispatch) {
       utils2.setup_body_dropzone(
-        fn(dragging) { dispatch(mm.UserDraggingPhoto(dragging)) },
-        fn(data_url) { dispatch(mm.UserSelectedPhotoDataUrl(data_url)) },
+        fn(dragging) { dispatch(mm.MsgPhoto(mm.UserDraggingPhoto(dragging))) },
+        fn(data_url) {
+          dispatch(mm.MsgPhoto(mm.UserSelectedPhotoDataUrl(data_url)))
+        },
       )
     })
 
@@ -199,28 +199,18 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         echo err
         mm.PatientLoadNotFound("error reading patient bundle")
       })
-    mm.UserClickedChangeClient(baseurl) ->
-      settings.switch_client(model, baseurl)
-    mm.ServerUpdatedPatientPhoto(Error(err)) -> todo
-    mm.UserDraggingPhoto(dragging_photo) ->
-      photo.set_drag_photo(model, dragging_photo)
-    mm.UserSelectedPhotoEvent(event) -> photo.select_photo(model, event)
-    mm.UserSelectedPhotoDataUrl(dataurl) -> photo.select_daturl(model, dataurl)
-    mm.UserClickedExistingPhoto(num) -> photo.set_existing(model, num)
-    mm.ServerUpdatedPatientPhoto(Ok(patient)) -> photo.update(model, patient)
-    mm.MsgAllergy(msg) -> {
-      let #(model, eff) = allergy.update(msg, model)
-      #(model, effect.map(eff, mm.MsgAllergy))
-    }
-    mm.UserClickedRegisterPatient(Ok(newpat)) ->
-      registerpatient.create(model, newpat)
-    mm.UserClickedRegisterPatient(Error(err)) ->
-      registerpatient.form_errors(model, err)
-    mm.ServerReturnedRegisterPatient(Ok(created_pat)) ->
-      registerpatient.created(model, created_pat)
-    mm.ServerReturnedRegisterPatient(Error(err)) ->
-      registerpatient.create_error(model, err)
+    mm.MsgSettings(msg) ->
+      sub_update(msg, model, settings.update, mm.MsgSettings)
+    mm.MsgPhoto(msg) -> sub_update(msg, model, photo.update, mm.MsgPhoto)
+    mm.MsgAllergy(msg) -> sub_update(msg, model, allergy.update, mm.MsgAllergy)
+    mm.MsgRegisterPatient(msg) ->
+      sub_update(msg, model, registerpatient.update, mm.MsgRegisterPatient)
   }
+}
+
+pub fn sub_update(model, msg, sub_update_fn, sub_update_type) {
+  let #(model, eff) = sub_update_fn(model, msg)
+  #(model, effect.map(eff, sub_update_type))
 }
 
 fn set_search_result(model: Model, results: mm.SearchPatientResults) {
@@ -340,94 +330,108 @@ fn view(model: Model) -> Element(Msg) {
         })
       }
     ]),
-    case model.route {
-      mm.RouteNoId(route) ->
-        h.main([a.class("my-16 flex-1")], case route {
-          mm.Index -> index.view()
-          mm.Settings -> settings.view(model)
-          mm.RegisterPatient(newpatient) -> registerpatient.view(newpatient)
-          mm.NotFound(not_found) -> notfound.view(not_found)
-        })
-      mm.RoutePatient(id:, patient:, page:) ->
-        h.main([a.class("flex flex-1")], [
-          h.nav(
-            [
-              a.class(
-                "w-56 shrink-0 bg-slate-800 border-r border-slate-700 flex flex-col items-center p-2",
-              ),
-            ],
-            case patient {
-              mm.PatientLoadStillLoading -> {
-                [h.text("loading")]
-              }
-              mm.PatientLoadNotFound(err) -> {
-                [h.text("patient " <> id <> " not found: " <> err)]
-              }
-              mm.PatientLoadFound(data:) -> {
-                let photo =
-                  data.patient.photo
-                  |> list.find_map(utils.get_img_src)
-                  |> result.unwrap(patient_photo_placeholder)
-                  |> utils.view_patient_photo_box(None)
-                // view_patient_photo_box takes Msg to run on click
-                // but here we navigate with href/modem instead, and pass None in for msg
-                [
-                  h.a(
-                    [
-                      href(mm.RoutePatient(
-                        id:,
-                        patient:,
-                        page: mm.PatientPhotos,
-                      )),
-                    ],
-                    [photo],
-                  ),
-                  h.text(
-                    patient.data.patient.name
-                    |> utils.humannames_to_single_name_string,
-                  ),
-                ]
-              }
-            },
-          ),
-          h.div([a.class("flex-1")], [
-            h.ul(
-              [a.class(nav_bar_class)],
-              mm.pages_patient
-                |> list.filter(fn(x) { x.1 != mm.PatientPhotos })
-                |> list.map(fn(link) {
-                  view_header_link(
-                    current: model.route,
-                    to: mm.RoutePatient(id, mm.PatientLoadStillLoading, link.1),
-                    label: link.0,
-                  )
-                }),
+    {
+      case model.route {
+        mm.RouteNoId(route) ->
+          h.main([a.class("my-16 flex-1")], case route {
+            mm.Index -> index.view()
+            mm.Settings -> settings.view(model) |> sub_view(mm.MsgSettings)
+            mm.RegisterPatient(newpatient) ->
+              registerpatient.view(newpatient)
+              |> sub_view(mm.MsgRegisterPatient)
+            mm.NotFound(not_found) -> notfound.view(not_found)
+          })
+        mm.RoutePatient(id:, patient:, page:) ->
+          h.main([a.class("flex flex-1")], [
+            h.nav(
+              [
+                a.class(
+                  "w-56 shrink-0 bg-slate-800 border-r border-slate-700 flex flex-col items-center p-2",
+                ),
+              ],
+              case patient {
+                mm.PatientLoadStillLoading -> {
+                  [h.text("loading")]
+                }
+                mm.PatientLoadNotFound(err) -> {
+                  [h.text("patient " <> id <> " not found: " <> err)]
+                }
+                mm.PatientLoadFound(data:) -> {
+                  let photo =
+                    data.patient.photo
+                    |> list.find_map(utils.get_img_src)
+                    |> result.unwrap(patient_photo_placeholder)
+                    |> utils.view_patient_photo_box(None)
+                  // view_patient_photo_box takes Msg to run on click
+                  // but here we navigate with href/modem instead, and pass None in for msg
+                  [
+                    h.a(
+                      [
+                        href(mm.RoutePatient(
+                          id:,
+                          patient:,
+                          page: mm.PatientPhotos,
+                        )),
+                      ],
+                      [photo],
+                    ),
+                    h.text(
+                      patient.data.patient.name
+                      |> utils.humannames_to_single_name_string,
+                    ),
+                  ]
+                }
+              },
             ),
-            case patient {
-              mm.PatientLoadStillLoading -> {
-                h.text("loading")
-              }
-              mm.PatientLoadNotFound(_) -> {
-                h.text("loading")
-              }
-              mm.PatientLoadFound(data:) -> {
-                h.div([], case page {
-                  mm.PatientOverview -> overview.view(data)
-                  mm.PatientAllergies(allergy_form) ->
-                    allergy.view(data, allergy_form)
-                    |> list.map(fn(el) { element.map(el, mm.MsgAllergy) })
-                  mm.PatientImmunizations(immunization_form) ->
-                    immunization.view(data, immunization_form)
-                  mm.PatientOrders -> medication.view(data)
-                  mm.PatientVitals -> vitals.view(data)
-                  mm.PatientPhotos -> photo.view(model, data)
-                })
-              }
-            },
-          ]),
-        ])
+            h.div([a.class("flex-1")], [
+              h.ul(
+                [a.class(nav_bar_class)],
+                mm.pages_patient
+                  |> list.filter(fn(x) { x.1 != mm.PatientPhotos })
+                  |> list.map(fn(link) {
+                    view_header_link(
+                      current: model.route,
+                      to: mm.RoutePatient(
+                        id,
+                        mm.PatientLoadStillLoading,
+                        link.1,
+                      ),
+                      label: link.0,
+                    )
+                  }),
+              ),
+              case patient {
+                mm.PatientLoadStillLoading -> {
+                  h.text("loading")
+                }
+                mm.PatientLoadNotFound(_) -> {
+                  h.text("loading")
+                }
+                mm.PatientLoadFound(data:) -> {
+                  h.div([], case page {
+                    mm.PatientOverview -> overview.view(data)
+                    mm.PatientAllergies(allergy_form) ->
+                      allergy.view(data, allergy_form)
+                      |> sub_view(mm.MsgAllergy)
+                    mm.PatientImmunizations(immunization_form) ->
+                      immunization.view(data, immunization_form)
+                    mm.PatientOrders -> medication.view(data)
+                    mm.PatientVitals -> vitals.view(data)
+                    mm.PatientPhotos ->
+                      photo.view(model, data)
+                      |> sub_view(mm.MsgPhoto)
+                  })
+                }
+              },
+            ]),
+          ])
+      }
     },
   ])
+}
+
+fn sub_view(sub_view_fn, sub_msg) {
+  sub_view_fn |> list.map(fn(el) { element.map(el, sub_msg) })
 }
 
 fn view_header_link(

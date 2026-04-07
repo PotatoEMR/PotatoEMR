@@ -127,7 +127,7 @@ pub fn route_to_urlstring(route: Route) -> String {
 }
 
 pub const pages_no_id: List(#(String, RouteNoId)) = [
-  #("", Index),
+  #("home", Index),
   #("settings", Settings),
   #("registerpatient", RegisterPatient(None)),
 ]
@@ -144,6 +144,7 @@ pub const pages_patient: List(#(String, RoutePatientPage)) = [
 pub fn uri_to_route(uri: Uri) -> Route {
   case uri.path_segments(uri.path) {
     [] -> RouteNoId(Index)
+    [""] -> RouteNoId(Index)
     [page] ->
       case pages_no_id |> dict.from_list |> dict.get(page) {
         Ok(page) -> RouteNoId(page:)
@@ -162,20 +163,32 @@ pub fn uri_to_route(uri: Uri) -> Route {
 
 pub type Msg {
   UserNavigatedTo(route: Route)
-  UserClickedChangeClient(String)
+  ServerReturnedPatientEverything(Result(r4us.Bundle, r4us_rsvp.Err))
   UserFocusedSearch
   UserBlurredSearch
   UserSearchedPatient(String)
   ServerReturnedSearchPatients(Result(List(r4us.Patient), r4us_rsvp.Err))
-  ServerReturnedPatientEverything(Result(r4us.Bundle, r4us_rsvp.Err))
   MsgAllergy(SubmsgAllergy)
+  MsgPhoto(SubmsgPhoto)
+  MsgRegisterPatient(SubmsgRegisterPatient)
+  MsgSettings(SubmsgSettings)
+}
+
+pub type SubmsgSettings {
+  UserClickedChangeClient(String)
+}
+
+pub type SubmsgRegisterPatient {
+  UserClickedRegisterPatient(Result(r4us.Patient, Form(r4us.Patient)))
+  ServerReturnedRegisterPatient(Result(r4us.Patient, r4us_rsvp.Err))
+}
+
+pub type SubmsgPhoto {
   ServerUpdatedPatientPhoto(Result(r4us.Patient, r4us_rsvp.Err))
   UserSelectedPhotoEvent(dynamic.Dynamic)
   UserSelectedPhotoDataUrl(String)
   UserDraggingPhoto(Bool)
   UserClickedExistingPhoto(Int)
-  UserClickedRegisterPatient(Result(r4us.Patient, Form(r4us.Patient)))
-  ServerReturnedRegisterPatient(Result(r4us.Patient, r4us_rsvp.Err))
 }
 
 pub type SubmsgAllergy {

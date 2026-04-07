@@ -14,6 +14,16 @@ import model_msgs.{type Model, Model} as mm
 import modem
 import utils
 
+pub fn update(msg, model) {
+  case msg {
+    mm.UserClickedRegisterPatient(Ok(newpat)) -> create(model, newpat)
+    mm.UserClickedRegisterPatient(Error(err)) -> form_errors(model, err)
+    mm.ServerReturnedRegisterPatient(Ok(created_pat)) ->
+      created(model, created_pat)
+    mm.ServerReturnedRegisterPatient(Error(err)) -> create_error(model, err)
+  }
+}
+
 pub fn create(model: Model, newpat: r4us.Patient) {
   let effect =
     r4us_rsvp.patient_create(

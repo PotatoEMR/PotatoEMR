@@ -15,9 +15,21 @@ import lustre/element.{type Element}
 import lustre/element/html as h
 import lustre/element/svg
 import lustre/event
-import model_msgs.{type Model, type Msg, Model} as mm
+import model_msgs.{type Model, Model} as mm
 import utils
 import utils2
+
+pub fn update(msg, model) {
+  case msg {
+    mm.ServerUpdatedPatientPhoto(Error(_)) -> todo
+    mm.ServerUpdatedPatientPhoto(Ok(patient)) -> server_updated(model, patient)
+    mm.UserDraggingPhoto(dragging_photo) ->
+      set_drag_photo(model, dragging_photo)
+    mm.UserSelectedPhotoEvent(event) -> select_photo(model, event)
+    mm.UserSelectedPhotoDataUrl(dataurl) -> select_daturl(model, dataurl)
+    mm.UserClickedExistingPhoto(num) -> set_existing(model, num)
+  }
+}
 
 pub fn select_daturl(model: Model, data_url) {
   // data_url is like "data:image/png;base64,iVBOR..."
@@ -60,10 +72,7 @@ pub fn select_daturl(model: Model, data_url) {
   }
 }
 
-pub fn select_photo(
-  model: Model,
-  event: dynamic.Dynamic,
-) -> #(Model, Effect(Msg)) {
+pub fn select_photo(model: Model, event: dynamic.Dynamic) {
   #(
     Model(..model, dragging_photo: False),
     effect.from(fn(dispatch) {
@@ -74,7 +83,7 @@ pub fn select_photo(
   )
 }
 
-pub fn update(model: Model, patient: r4us.Patient) {
+fn server_updated(model: Model, patient: r4us.Patient) {
   utils2.update_patient(model, fn(pat) {
     case pat {
       mm.PatientLoadFound(data:) ->
@@ -191,7 +200,7 @@ pub fn view(model: Model, data: mm.PatientData) {
   ]
 }
 
-fn on_file_input(msg: fn(dynamic.Dynamic) -> Msg) -> Attribute(Msg) {
+fn on_file_input(msg) {
   let raw_decoder = decode.new_primitive_decoder("Dynamic", fn(dyn) { Ok(dyn) })
   event.on("change", {
     use evt <- decode.then(raw_decoder)
