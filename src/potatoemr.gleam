@@ -20,6 +20,7 @@ import pages/no_id/notfound
 import pages/no_id/registerpatient
 import pages/no_id/settings
 import pages/patient/allergy
+import pages/patient/immunization
 import pages/patient/medication
 import pages/patient/overview
 import pages/patient/photo
@@ -207,18 +208,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     mm.UserSelectedPhotoDataUrl(dataurl) -> photo.select_daturl(model, dataurl)
     mm.UserClickedExistingPhoto(num) -> photo.set_existing(model, num)
     mm.ServerUpdatedPatientPhoto(Ok(patient)) -> photo.update(model, patient)
-    mm.ServerCreatedAllergy(Ok(alrgy)) -> allergy.server_created(model, alrgy)
-    mm.ServerCreatedAllergy(Error(_)) -> todo
-    mm.ServerUpdatedAllergy(Ok(alrgy)) -> allergy.server_updated(model, alrgy)
-    mm.ServerUpdatedAllergy(Error(_)) -> todo
-    mm.ServerDeletedAllergy(_) -> #(model, effect.none())
-    mm.UserClickedCreateAllergy -> allergy.edit(model, None)
-    mm.UserClickedEditAllergy(id) -> allergy.edit(model, Some(id))
-    mm.UserClickedDeleteAllergy(id) -> allergy.delete(model, id)
-    mm.UserClickedCloseAllergyForm -> allergy.close_form(model)
-    mm.UserSubmittedAllergyForm(Ok(new_allergy)) ->
-      allergy.submit(model, new_allergy)
-    mm.UserSubmittedAllergyForm(Error(err)) -> allergy.form_errors(model, err)
+    mm.MsgAllergy(msg) -> {
+      let #(model, eff) = allergy.update(msg, model)
+      #(model, effect.map(eff, mm.MsgAllergy))
+    }
     mm.UserClickedRegisterPatient(Ok(newpat)) ->
       registerpatient.create(model, newpat)
     mm.UserClickedRegisterPatient(Error(err)) ->
@@ -422,6 +415,9 @@ fn view(model: Model) -> Element(Msg) {
                   mm.PatientOverview -> overview.view(data)
                   mm.PatientAllergies(allergy_form) ->
                     allergy.view(data, allergy_form)
+                    |> list.map(fn(el) { element.map(el, mm.MsgAllergy) })
+                  mm.PatientImmunizations(immunization_form) ->
+                    immunization.view(data, immunization_form)
                   mm.PatientOrders -> medication.view(data)
                   mm.PatientVitals -> vitals.view(data)
                   mm.PatientPhotos -> photo.view(model, data)

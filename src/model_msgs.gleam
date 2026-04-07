@@ -78,6 +78,7 @@ pub type PatientData {
 pub type RoutePatientPage {
   PatientOverview
   PatientAllergies(FormState(r4us.Allergyintolerance))
+  PatientImmunizations(FormState(r4us.Immunization))
   PatientOrders
   PatientVitals
   PatientPhotos
@@ -118,6 +119,7 @@ pub fn route_to_urlstring(route: Route) -> String {
         PatientOrders -> "orders"
         PatientVitals -> "vitals"
         PatientPhotos -> "photos"
+        PatientImmunizations(_) -> "immunizations"
       }
       "/patient/" <> id <> "/" <> ending
     }
@@ -133,6 +135,7 @@ pub const pages_no_id: List(#(String, RouteNoId)) = [
 pub const pages_patient: List(#(String, RoutePatientPage)) = [
   #("overview", PatientOverview),
   #("allergies", PatientAllergies(FormStateNone)),
+  #("immunizations", PatientImmunizations(FormStateNone)),
   #("orders", PatientOrders),
   #("vitals", PatientVitals),
   #("photos", PatientPhotos),
@@ -165,6 +168,17 @@ pub type Msg {
   UserSearchedPatient(String)
   ServerReturnedSearchPatients(Result(List(r4us.Patient), r4us_rsvp.Err))
   ServerReturnedPatientEverything(Result(r4us.Bundle, r4us_rsvp.Err))
+  MsgAllergy(SubmsgAllergy)
+  ServerUpdatedPatientPhoto(Result(r4us.Patient, r4us_rsvp.Err))
+  UserSelectedPhotoEvent(dynamic.Dynamic)
+  UserSelectedPhotoDataUrl(String)
+  UserDraggingPhoto(Bool)
+  UserClickedExistingPhoto(Int)
+  UserClickedRegisterPatient(Result(r4us.Patient, Form(r4us.Patient)))
+  ServerReturnedRegisterPatient(Result(r4us.Patient, r4us_rsvp.Err))
+}
+
+pub type SubmsgAllergy {
   ServerCreatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
   ServerUpdatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
   ServerDeletedAllergy(Result(r4us.Operationoutcome, r4us_rsvp.Err))
@@ -175,11 +189,4 @@ pub type Msg {
   UserClickedEditAllergy(String)
   UserClickedDeleteAllergy(String)
   UserClickedCloseAllergyForm
-  ServerUpdatedPatientPhoto(Result(r4us.Patient, r4us_rsvp.Err))
-  UserSelectedPhotoEvent(dynamic.Dynamic)
-  UserSelectedPhotoDataUrl(String)
-  UserDraggingPhoto(Bool)
-  UserClickedExistingPhoto(Int)
-  UserClickedRegisterPatient(Result(r4us.Patient, Form(r4us.Patient)))
-  ServerReturnedRegisterPatient(Result(r4us.Patient, r4us_rsvp.Err))
 }

@@ -19,6 +19,22 @@ import terminology/substancecodes
 import utils
 import utils2
 
+pub fn update(msg, model) {
+  case msg {
+    mm.ServerCreatedAllergy(Ok(alrgy)) -> server_created(model, alrgy)
+    mm.ServerCreatedAllergy(Error(_)) -> todo
+    mm.ServerUpdatedAllergy(Ok(alrgy)) -> server_updated(model, alrgy)
+    mm.ServerUpdatedAllergy(Error(_)) -> todo
+    mm.ServerDeletedAllergy(_) -> #(model, effect.none())
+    mm.UserClickedCreateAllergy -> edit(model, None)
+    mm.UserClickedEditAllergy(id) -> edit(model, Some(id))
+    mm.UserClickedDeleteAllergy(id) -> delete(model, id)
+    mm.UserClickedCloseAllergyForm -> close_form(model)
+    mm.UserSubmittedAllergyForm(Ok(new_allergy)) -> submit(model, new_allergy)
+    mm.UserSubmittedAllergyForm(Error(err)) -> form_errors(model, err)
+  }
+}
+
 pub fn server_created(
   model: Model,
   allergy: r4us.Allergyintolerance,
@@ -337,7 +353,14 @@ pub fn view(
   let head =
     h.tr(
       [],
-      utils.th_list(["allergy", "type", "criticality", "notes", "date recorded", ""]),
+      utils.th_list([
+        "allergy",
+        "type",
+        "criticality",
+        "notes",
+        "date recorded",
+        "",
+      ]),
     )
   let rows =
     list.map(pat.patient_allergies, fn(allergy) {
