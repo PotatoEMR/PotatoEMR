@@ -122,6 +122,8 @@ pub fn edit(model: Model, edit_allergy_id: Option(String)) {
                       Some(rd) -> rd
                     },
                   )
+                  // id is in form probably just so view knows if editing or creating
+                  |> form.add_string("id", edit_allergy_id)
                   |> form_to_model(model, pat_id, patient)
                 }
               }
@@ -196,6 +198,16 @@ pub fn set_form_state(model model, id id, patient patient, formstate formstate) 
   let allergy_form = mm.PatientAllergies(formstate)
   let route = mm.RoutePatient(id:, patient:, page: allergy_form)
   let model = Model(..model, route:)
+}
+
+pub fn close_form(model: Model) {
+  case model.route {
+    mm.RouteNoId(_) -> #(model, effect.none())
+    mm.RoutePatient(id:, patient:, page:) -> #(
+      model |> set_form_state(id:, patient:, formstate: mm.FormStateNone),
+      effect.none(),
+    )
+  }
 }
 
 pub fn form_errors(model: Model, err: Form(r4us.Allergyintolerance)) {
@@ -337,21 +349,36 @@ pub fn view(
       }
     })
   [
-    h.h1([a.class("text-xl font-bold p-4")], [
-      h.text("Allergies and Intolerances"),
-    ]),
-    btn("Create New Allergy/Intolerance", on_click: mm.UserClickedCreateAllergy),
-    h.table([a.class("border-separate border-spacing-4 m-4")], [
+    h.div([a.class("p-4 max-w-4xl")], [
+      h.div([a.class("flex items-center gap-4")], [
+        h.h1([a.class("text-xl font-bold")], [
+          h.text("Allergies and Intolerances"),
+        ]),
+        btn("Create New Allergy/Intolerance", on_click: mm.UserClickedCreateAllergy),
+      ]),
+      h.table([a.class("border-separate border-spacing-4")], [
       h.thead([], [head]),
       h.tbody([], rows),
     ]),
     case allergy_form {
       mm.FormStateNone -> element.none()
       mm.FormStateLoading -> h.p([], [h.text("loading...")])
-      mm.FormStateSome(allergy_form) ->
+      mm.FormStateSome(allergy_form) -> {
+        let legend_text = case form.field_value(allergy_form, "id") {
+          "" -> "Create Allergy/Intolerance"
+          _ -> {
+            let code = form.field_value(allergy_form, "code")
+            let display =
+              substancecodes.substance_codes
+              |> list.find(fn(entry) { entry.0 == code })
+              |> result.map(fn(entry) { entry.1 })
+              |> result.unwrap(code)
+            "Edit " <> display
+          }
+        }
         h.form(
           [
-            a.class("flex flex-row flex-wrap gap-4 max-w-2xl p-4"),
+            a.class("max-w-2xl"),
             event.on_submit(fn(values) {
               allergy_form
               |> form.add_values(values)
@@ -360,75 +387,86 @@ pub fn view(
             }),
           ],
           [
-            view_form_coding_select(
-              allergy_form,
-              name: "code",
-              options: list.map(substancecodes.substance_codes, fn(entry) {
-                CodingOption(
-                  code: entry.0,
-                  display: entry.1,
-                  system: "http://snomed.info/sct",
-                )
-              }),
-              label: "allergy",
+            h.fieldset(
+              [a.class("border border-slate-600 rounded-lg p-4 flex flex-row flex-wrap gap-4")],
+              [
+                h.legend([a.class("px-2 text-sm font-bold text-slate-200")], [
+                  h.text(legend_text),
+                ]),
+                view_form_coding_select(
+                  allergy_form,
+                  name: "code",
+                  options: list.map(substancecodes.substance_codes, fn(entry) {
+                    CodingOption(
+                      code: entry.0,
+                      display: entry.1,
+                      system: "http://snomed.info/sct",
+                    )
+                  }),
+                  label: "allergy",
+                ),
+                view_form_input(
+                  allergy_form,
+                  is: "text",
+                  name: "note",
+                  label: "note",
+                ),
+                view_form_input(
+                  allergy_form,
+                  is: "date",
+                  name: "recorded_date",
+                  label: "date recorded",
+                ),
+                view_form_select(
+                  allergy_form,
+                  name: "type_",
+                  options: list.map(
+                    [
+                      r4us_valuesets.AllergyintolerancetypeAllergy,
+                      r4us_valuesets.AllergyintolerancetypeIntolerance,
+                    ],
+                    r4us_valuesets.allergyintolerancetype_to_string,
+                  ),
+                  label: "type",
+                ),
+                view_form_select(
+                  allergy_form,
+                  name: "criticality",
+                  options: list.map(
+                    [
+                      r4us_valuesets.AllergyintolerancecriticalityLow,
+                      r4us_valuesets.AllergyintolerancecriticalityHigh,
+                      r4us_valuesets.AllergyintolerancecriticalityUnabletoassess,
+                    ],
+                    r4us_valuesets.allergyintolerancecriticality_to_string,
+                  ),
+                  label: "criticality",
+                ),
+                view_form_select(
+                  allergy_form,
+                  name: "category",
+                  options: list.map(
+                    [
+                      r4us_valuesets.AllergyintolerancecategoryFood,
+                      r4us_valuesets.AllergyintolerancecategoryMedication,
+                      r4us_valuesets.AllergyintolerancecategoryEnvironment,
+                      r4us_valuesets.AllergyintolerancecategoryBiologic,
+                    ],
+                    r4us_valuesets.allergyintolerancecategory_to_string,
+                  ),
+                  label: "category",
+                ),
+                h.div([a.class("w-full flex justify-end gap-2")], [
+                  btn("Cancel", on_click: mm.UserClickedCloseAllergyForm),
+                  btn_nomsg("Save Allergy/Intolerance"),
+                ]),
+              ],
             ),
-            view_form_input(
-              allergy_form,
-              is: "text",
-              name: "note",
-              label: "note",
-            ),
-            view_form_input(
-              allergy_form,
-              is: "date",
-              name: "recorded_date",
-              label: "date recorded",
-            ),
-            view_form_select(
-              allergy_form,
-              name: "type_",
-              options: list.map(
-                [
-                  r4us_valuesets.AllergyintolerancetypeAllergy,
-                  r4us_valuesets.AllergyintolerancetypeIntolerance,
-                ],
-                r4us_valuesets.allergyintolerancetype_to_string,
-              ),
-              label: "type",
-            ),
-            view_form_select(
-              allergy_form,
-              name: "criticality",
-              options: list.map(
-                [
-                  r4us_valuesets.AllergyintolerancecriticalityLow,
-                  r4us_valuesets.AllergyintolerancecriticalityHigh,
-                  r4us_valuesets.AllergyintolerancecriticalityUnabletoassess,
-                ],
-                r4us_valuesets.allergyintolerancecriticality_to_string,
-              ),
-              label: "criticality",
-            ),
-            view_form_select(
-              allergy_form,
-              name: "category",
-              options: list.map(
-                [
-                  r4us_valuesets.AllergyintolerancecategoryFood,
-                  r4us_valuesets.AllergyintolerancecategoryMedication,
-                  r4us_valuesets.AllergyintolerancecategoryEnvironment,
-                  r4us_valuesets.AllergyintolerancecategoryBiologic,
-                ],
-                r4us_valuesets.allergyintolerancecategory_to_string,
-              ),
-              label: "category",
-            ),
-            h.div([a.class("w-full flex justify-end")], [
-              btn_nomsg("Save Allergy/Intolerance"),
-            ]),
           ],
         )
+      }
     },
+    ]),
   ]
 }
 

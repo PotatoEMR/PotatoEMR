@@ -182,6 +182,7 @@ pub type Msg {
   )
   UserClickedCreateAllergy
   UserClickedEditAllergy(String)
+  UserClickedCloseAllergyForm
   ServerUpdatedPatientPhoto(Result(r4us.Patient, r4us_rsvp.Err))
   UserSelectedPhotoEvent(dynamic.Dynamic)
   UserSelectedPhotoDataUrl(String)

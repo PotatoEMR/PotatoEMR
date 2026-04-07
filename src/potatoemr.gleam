@@ -6,6 +6,7 @@ import formal/form.{type Form}
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/result
+import gleam/string
 import lustre
 import lustre/attribute as a
 import lustre/effect.{type Effect}
@@ -160,7 +161,9 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
               response_msg: mm.ServerReturnedSearchPatients,
             )
           let model =
-            model |> set_search_result(mm.SearchPatientResultsLoadingMsg)
+            model
+            |> set_search_result(mm.SearchPatientResultsLoadingMsg)
+            |> set_search_visible(True)
           #(model, search)
         }
       }
@@ -211,6 +214,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     mm.ServerDeletedAllergy(_) -> todo
     mm.UserClickedCreateAllergy -> allergy.edit(model, None)
     mm.UserClickedEditAllergy(id) -> allergy.edit(model, Some(id))
+    mm.UserClickedCloseAllergyForm -> allergy.close_form(model)
     mm.UserSubmittedAllergyForm(Ok(new_allergy)) ->
       allergy.submit(model, new_allergy)
     mm.UserSubmittedAllergyForm(Error(err)) -> allergy.form_errors(model, err)
@@ -235,16 +239,12 @@ fn set_search_visible(model: Model, visible: Bool) {
 
 // VIEW ------------------------------------------------------------------------
 
+const nav_bar_class = "flex items-end space-x-1 px-2 h-10 bg-slate-800 border-b border-slate-700"
+
 fn view(model: Model) -> Element(Msg) {
   h.div([a.class("w-full min-h-screen flex flex-col bg-slate-900 text-white")], [
-    h.nav(
-      [
-        a.class(
-          "flex justify-between p-2 bg-slate-800 border-b border-slate-700",
-        ),
-      ],
-      [
-        h.ul([a.class("flex space-x-4")], [
+    h.nav([], [
+        h.ul([a.class(nav_bar_class)], [
           h.li([a.class("relative")], [
             h.input([
               a.class("border border-slate-700"),
@@ -259,7 +259,7 @@ fn view(model: Model) -> Element(Msg) {
                 h.div(
                   [
                     a.class(
-                      "absolute top-full left-0 bg-zinc-800 w-lg h-80 overflow-auto z-50",
+                      "absolute top-full left-0 bg-zinc-800 w-2xl h-120 overflow-auto z-50",
                     ),
                     event.prevent_default(event.on_mouse_down(
                       mm.UserFocusedSearch,
@@ -276,23 +276,66 @@ fn view(model: Model) -> Element(Msg) {
                         [] -> [h.p([], [h.text("no patients found")])]
                         pats ->
                           list.map(pats, fn(pat) {
-                            h.p([], [
-                              case pat.id {
-                                None -> element.none()
-                                Some(id) ->
-                                  view_header_link(
-                                    current: model.route,
-                                    to: mm.RoutePatient(
+                            case pat.id {
+                              None -> element.none()
+                              Some(id) -> {
+                                let photo_src =
+                                  pat.photo
+                                  |> list.find_map(utils.get_img_src)
+                                  |> result.unwrap(patient_photo_placeholder)
+                                let name =
+                                  utils.humannames_to_single_name_string(pat.name)
+                                let gender = case pat.gender {
+                                  None -> ""
+                                  Some(g) ->
+                                    r4us_valuesets.administrativegender_to_string(
+                                      g,
+                                    )
+                                }
+                                let age = case pat.birth_date {
+                                  None -> ""
+                                  Some(bd) -> bd
+                                }
+                                let identifier = case pat.identifier {
+                                  [] -> ""
+                                  [first, ..] ->
+                                    option.unwrap(first.value, "")
+                                }
+                                let detail =
+                                  [gender, age, identifier]
+                                  |> list.filter(fn(s) { s != "" })
+                                  |> string.join(" \u{00B7} ")
+                                h.a(
+                                  [
+                                    href(mm.RoutePatient(
                                       id,
                                       mm.PatientLoadStillLoading,
                                       mm.PatientOverview,
+                                    )),
+                                    a.class(
+                                      "flex items-center gap-3 p-4 hover:bg-zinc-700",
                                     ),
-                                    label: utils.humannames_to_single_name_string(
-                                      pat.name,
-                                    ),
-                                  )
-                              },
-                            ])
+                                  ],
+                                  [
+                                    h.img([
+                                      a.src(photo_src),
+                                      a.class(
+                                        "w-20 h-20 rounded-full object-cover",
+                                      ),
+                                    ]),
+                                    h.div([], [
+                                      h.p([a.class("font-bold")], [
+                                        h.text(name),
+                                      ]),
+                                      h.p(
+                                        [a.class("text-sm text-slate-400")],
+                                        [h.text(detail)],
+                                      ),
+                                    ]),
+                                  ],
+                                )
+                              }
+                            }
                           })
                       }
                   },
@@ -362,11 +405,7 @@ fn view(model: Model) -> Element(Msg) {
           ),
           h.div([a.class("flex-1")], [
             h.ul(
-              [
-                a.class(
-                  "p-2 flex space-x-4 bg-slate-800 border-b border-slate-700",
-                ),
-              ],
+              [a.class(nav_bar_class)],
               [
                 #(mm.PatientOverview, "Overview"),
                 #(mm.PatientAllergies(mm.FormStateNone), "Allergies"),
@@ -419,20 +458,20 @@ fn view_header_link(
   current current: Route,
   label text: String,
 ) -> Element(msg) {
-  // let is_active = case current, target {
-  //   PostById(_), Posts -> True
-  //   _, _ -> current == target
-  // }
-  let is_active = current == target
+  let active =
+    mm.route_to_urlstring(current) == mm.route_to_urlstring(target)
 
-  h.li(
-    [
-      a.classes([
-        #("underline-offset-4", True),
-        #("hover:underline", !is_active),
-        #("underline", is_active),
-      ]),
-    ],
-    [h.a([href(target)], [h.text(text)])],
-  )
+  h.li([a.class("flex -mb-px")], [
+    h.a(
+      [
+        href(target),
+        a.classes([
+          #("flex items-center px-3 py-1 rounded-t-2xl border-x border-t", True),
+          #("hover:text-slate-300 border-transparent", !active),
+          #("bg-[#0f172b] border-slate-700", active),
+        ]),
+      ],
+      [h.text(text)],
+    ),
+  ])
 }
