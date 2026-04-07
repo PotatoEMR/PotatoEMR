@@ -456,7 +456,7 @@ fn view_header_link(
       [
         href(target),
         a.classes([
-          #("flex items-center px-3 py-1 rounded-t-2xl border-x border-t", True),
+          #("flex items-center px-3 py-1 rounded-t-2xl border-x border-t underline", True),
           #("hover:text-slate-300 border-transparent", !active),
           #("bg-[#0f172b] border-slate-700", active),
         ]),

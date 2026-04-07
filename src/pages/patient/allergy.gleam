@@ -472,7 +472,7 @@ pub fn view(
 
 fn btn_attrs() {
   [
-    a.class("text-sm font-bold px-4 py-2 rounded-lg"),
+    a.class("text-sm font-bold px-4 py-2 rounded-lg cursor-pointer"),
     a.class("border border-slate-600 text-slate-200 bg-slate-800"),
     a.class("hover:bg-slate-700"),
   ]
