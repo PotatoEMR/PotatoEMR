@@ -1,6 +1,6 @@
 import components.{
-  CodingOption, btn, btn_nomsg, view_form_coding_select, view_form_input,
-  view_form_select, view_form_textarea,
+  CodingOption, btn, btn_cancel, btn_nomsg, view_form_coding_select,
+  view_form_input, view_form_select, view_form_textarea,
 }
 import fhir/primitive_types
 import fhir/r4us
@@ -120,8 +120,10 @@ pub fn edit(model: Model, edit_imm_id: Option(String)) {
                     },
                   )
                   |> form.add_string("occurrence", case imm.occurrence {
-                    r4us.ImmunizationOccurrenceDatetime(d) ->
-                      d |> primitive_types.datetime_to_string
+                    r4us.ImmunizationOccurrenceDatetime(primitive_types.DateTime(
+                      date:,
+                      ..,
+                    )) -> date |> primitive_types.date_to_string
                     r4us.ImmunizationOccurrenceString(s) -> s
                   })
                   |> form.add_string(
@@ -289,36 +291,47 @@ pub fn immunization_schema(imm: r4us.Immunization) {
     Ok(s) -> s
     Error(_) -> r4us_valuesets.ImmunizationstatusCompleted
   }
-  use vaccine_code_str <- form.field("vaccine_code", form.parse_string)
-  let vaccine_code = case
-    list.find(vaccinecodes.vaccine_codes, fn(entry) {
-      entry.0 == vaccine_code_str
-    })
-  {
-    Ok(#(code_val, display)) ->
-      r4us.Codeableconcept(
-        ..r4us.codeableconcept_new(),
-        text: Some(display),
-        coding: [
-          utils.coding(
-            code: code_val,
-            system: "http://hl7.org/fhir/sid/cvx",
-            display:,
-          ),
-        ],
-      )
-    Error(_) -> imm.vaccine_code
-  }
-  use occurrence <- form.field(
-    "occurrence",
+  use vaccine_code <- form.field(
+    "vaccine_code",
     form.parse(fn(input) {
       let str = case input {
         [s, ..] -> s
         [] -> ""
       }
-      case primitive_types.parse_datetime(str) {
-        Ok(dt) -> Ok(r4us.ImmunizationOccurrenceDatetime(dt))
-        Error(_) -> Error(#(imm.occurrence, "Must be a valid date"))
+      case list.find(vaccinecodes.vaccine_codes, fn(entry) { entry.0 == str }) {
+        Ok(#(code_val, display)) ->
+          Ok(
+            r4us.Codeableconcept(
+              ..r4us.codeableconcept_new(),
+              text: Some(display),
+              coding: [
+                utils.coding(
+                  code: code_val,
+                  system: "http://hl7.org/fhir/sid/cvx",
+                  display:,
+                ),
+              ],
+            ),
+          )
+        Error(_) -> Error(#(imm.vaccine_code, "Must choose a vaccine"))
+      }
+    }),
+  )
+  use occurrence <- form.field(
+    "occurrence",
+    form.parse(fn(input) {
+      case input {
+        [dt, ..] ->
+          case dt {
+            //not strictly needed to check "" but might be nicer error msg
+            "" -> Error(#(imm.occurrence, "Date cannot be empty"))
+            dt ->
+              case primitive_types.parse_datetime(dt) {
+                Ok(dt) -> Ok(r4us.ImmunizationOccurrenceDatetime(dt))
+                Error(_) -> Error(#(imm.occurrence, "Invalid date"))
+              }
+          }
+        [] -> Error(#(imm.occurrence, "Date cannot be empty"))
       }
     }),
   )
@@ -420,17 +433,13 @@ pub fn view(
     |> list.map(fn(group) { list.flatten([spacer, group]) })
     |> list.flatten
   [
-    h.div([a.class("p-4 max-w-4xl")], [
+    h.div([a.class("p-4 max-w-4xl h-full flex flex-col overflow-hidden")], [
       h.div([a.class("flex items-center gap-4 mb-4")], [
         h.h1([a.class("text-xl font-bold")], [h.text("Immunizations")]),
         btn(
           "Create New Immunization",
           on_click: mm.UserClickedCreateImmunization,
         ),
-      ]),
-      h.table([a.class("border-collapse border border-slate-700 w-full")], [
-        h.thead([], [head]),
-        h.tbody([], grouped_rows),
       ]),
       case immunization_form {
         mm.FormStateNone -> element.none()
@@ -450,7 +459,7 @@ pub fn view(
           }
           h.form(
             [
-              a.class("max-w-2xl"),
+              a.class("max-w-2xl mb-4 shrink-0"),
               event.on_submit(fn(values) {
                 imm_form
                 |> form.add_values(values)
@@ -514,7 +523,7 @@ pub fn view(
                   ),
                   view_form_textarea(imm_form, name: "note", label: "note"),
                   h.div([a.class("w-full flex justify-end gap-2")], [
-                    btn("Cancel", on_click: mm.UserClickedCloseImmunizationForm),
+                    btn_cancel("Cancel", on_click: mm.UserClickedCloseImmunizationForm),
                     btn_nomsg("Save Immunization"),
                   ]),
                 ],
@@ -523,6 +532,12 @@ pub fn view(
           )
         }
       },
+      h.div([a.class("overflow-auto flex-1 min-h-0")], [
+        h.table([a.class("border-collapse border border-slate-700 w-full")], [
+          h.thead([], [head]),
+          h.tbody([], grouped_rows),
+        ]),
+      ]),
     ]),
   ]
 }

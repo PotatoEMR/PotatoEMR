@@ -199,7 +199,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     mm.ServerReturnedPatientEverything(Error(err)) ->
       utils2.update_patient(model, fn(_oldpat) {
         echo err
-        mm.PatientLoadNotFound("error reading patient bundle")
+        mm.PatientLoadNotFound(utils.err_to_string(err))
       })
     mm.MsgSettings(msg) ->
       sub_update(msg, model, settings.update, mm.MsgSettings)
@@ -230,7 +230,7 @@ fn set_search_visible(model: Model, visible: Bool) {
 const nav_bar_class = "flex items-end space-x-1 px-2 h-10 bg-slate-800 border-b border-slate-700"
 
 fn view(model: Model) -> Element(Msg) {
-  h.div([a.class("w-full min-h-screen flex flex-col bg-slate-900 text-white")], [
+  h.div([a.class("w-full h-screen flex flex-col bg-slate-900 text-white")], [
     h.nav([a.class(nav_bar_class)], [
       h.div([a.class("relative")], [
         h.input([
@@ -346,7 +346,7 @@ fn view(model: Model) -> Element(Msg) {
             mm.NotFound(not_found) -> notfound.view(not_found)
           })
         mm.RoutePatient(id:, patient:, page:) ->
-          h.main([a.class("flex flex-1")], [
+          h.main([a.class("flex flex-1 min-h-0")], [
             h.nav(
               [
                 a.class(
@@ -358,7 +358,7 @@ fn view(model: Model) -> Element(Msg) {
                   [h.text("loading")]
                 }
                 mm.PatientLoadNotFound(err) -> {
-                  [h.text("patient " <> id <> " not found: " <> err)]
+                  [h.text("patient " <> id <> " error: " <> err)]
                 }
                 mm.PatientLoadFound(data:) -> {
                   let photo =
@@ -387,7 +387,7 @@ fn view(model: Model) -> Element(Msg) {
                 }
               },
             ),
-            h.div([a.class("flex-1")], [
+            h.div([a.class("flex-1 flex flex-col min-h-0")], [
               h.ul(
                 [a.class(nav_bar_class)],
                 mm.pages_patient
@@ -412,7 +412,7 @@ fn view(model: Model) -> Element(Msg) {
                   h.text("loading")
                 }
                 mm.PatientLoadFound(data:) -> {
-                  h.div([], case page {
+                  h.div([a.class("flex-1 overflow-y-auto")], case page {
                     mm.PatientOverview -> overview.view(data)
                     mm.PatientAllergies(allergy_form) ->
                       allergy.view(data, allergy_form)

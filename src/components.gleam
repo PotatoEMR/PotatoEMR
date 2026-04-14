@@ -31,6 +31,12 @@ pub fn btn(label: String, on_click msg: msg) -> Element(msg) {
   h.button([event.on_click(msg), ..btn_attrs()], [h.text(label)])
 }
 
+pub fn btn_cancel(label: String, on_click msg: msg) -> Element(msg) {
+  h.button([a.type_("button"), event.on_click(msg), ..btn_attrs()], [
+    h.text(label),
+  ])
+}
+
 pub fn btn_nomsg(label: String) -> Element(msg) {
   h.button(btn_attrs(), [h.text(label)])
 }

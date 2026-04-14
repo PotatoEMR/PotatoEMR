@@ -1,6 +1,6 @@
 import components.{
-  CodingOption, btn, btn_nomsg, view_form_coding_select, view_form_input,
-  view_form_select, view_form_textarea,
+  CodingOption, btn, btn_cancel, btn_nomsg, view_form_coding_select,
+  view_form_input, view_form_select, view_form_textarea,
 }
 import fhir/primitive_types
 import fhir/r4us
@@ -533,7 +533,7 @@ pub fn view(
                     label: "category",
                   ),
                   h.div([a.class("w-full flex justify-end gap-2")], [
-                    btn("Cancel", on_click: mm.UserClickedCloseAllergyForm),
+                    btn_cancel("Cancel", on_click: mm.UserClickedCloseAllergyForm),
                     btn_nomsg("Save Allergy/Intolerance"),
                   ]),
                 ],

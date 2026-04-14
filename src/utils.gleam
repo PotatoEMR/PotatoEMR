@@ -1,11 +1,86 @@
 import fhir/primitive_types
 import fhir/r4us
+import fhir/r4us_rsvp
+import fhir/r4us_sansio
+import fhir/r4us_valuesets
+import gleam/int
+import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
 import lustre/attribute as a
 import lustre/element
 import lustre/element/html as h
+import rsvp
+
+pub fn err_to_string(err: r4us_rsvp.Err) {
+  case err {
+    r4us_rsvp.ErrRsvp(err:) -> rsvp_err_to_string(err)
+    r4us_rsvp.ErrSansio(err:) -> sansio_err_to_string(err)
+  }
+}
+
+pub fn rsvp_err_to_string(err: rsvp.Error) -> String {
+  "http request error"
+}
+
+pub fn sansio_err_to_string(err: r4us_sansio.ErrResp) {
+  case err {
+    r4us_sansio.ErrParseJson(dec_err) ->
+      "parsing json: "
+      <> case dec_err {
+        json.UnexpectedEndOfInput -> "unexpected end of input"
+        json.UnexpectedByte(byte) -> "unexpected byte " <> byte
+        json.UnexpectedSequence(seq) -> "unexpected sequence " <> seq
+        json.UnableToDecode(dec_err) ->
+          list.map(dec_err, fn(err) {
+            string.concat([
+              "expected ",
+              err.expected,
+              " but got ",
+              err.found,
+              " at ",
+              string.join(err.path, "."),
+            ])
+          })
+          |> string.join(",")
+      }
+    r4us_sansio.ErrNotJson(resp) ->
+      "response not json: "
+      <> int.to_string(resp.status)
+      <> case resp.body {
+        "" -> ""
+        body -> " " <> body
+      }
+    r4us_sansio.ErrOperationoutcome(oo) -> oo |> operationoutcome_to_string
+  }
+}
+
+fn operationoutcome_to_string(oo: r4us.Operationoutcome) -> String {
+  let issues = [oo.issue.first, ..oo.issue.rest]
+  issues
+  |> list.map(fn(issue) {
+    let path = case issue.expression {
+      [_, ..] -> Some(string.join(issue.expression, ", "))
+      [] ->
+        case issue.location {
+          [_, ..] -> Some(string.join(issue.location, ", "))
+          [] -> None
+        }
+    }
+    let details = option.map(issue.details, codeableconcept_to_string)
+    [
+      Some(r4us_valuesets.issueseverity_to_string(issue.severity)),
+      Some(r4us_valuesets.issuetype_to_string(issue.code)),
+      details,
+      issue.diagnostics,
+      path,
+    ]
+    |> option.values
+    |> string.join(" ")
+  })
+  |> string.join("; ")
+}
 
 pub fn humannames_to_single_name_string(names: List(r4us.Humanname)) -> String {
   case names {
