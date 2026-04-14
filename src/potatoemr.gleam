@@ -1,3 +1,4 @@
+import fhir/primitive_types
 import fhir/r4us_rsvp
 import fhir/r4us_sansio
 import fhir/r4us_valuesets
@@ -131,7 +132,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
             r4us_rsvp.search_any(
               "_id="
                 <> id
-                <> "&_revinclude=AllergyIntolerance:patient&_revinclude=MedicationRequest:patient&_revinclude=MedicationStatement:patient&_revinclude=Observation:patient&_revinclude=Condition:patient&_revinclude=Encounter:patient",
+                <> "&_revinclude=AllergyIntolerance:patient&_revinclude=Immunization:patient&_revinclude=MedicationRequest:patient&_revinclude=MedicationStatement:patient&_revinclude=Observation:patient&_revinclude=Condition:patient&_revinclude=Encounter:patient",
               "Patient",
               model.client,
               mm.ServerReturnedPatientEverything,
@@ -188,6 +189,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
           mm.PatientLoadFound(mm.PatientData(
             patient: first,
             patient_allergies: resources.allergyintolerance,
+            patient_immunizations: resources.immunization,
             patient_medications: resources.medication,
             patient_observations: resources.observation,
           ))
@@ -203,6 +205,8 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       sub_update(msg, model, settings.update, mm.MsgSettings)
     mm.MsgPhoto(msg) -> sub_update(msg, model, photo.update, mm.MsgPhoto)
     mm.MsgAllergy(msg) -> sub_update(msg, model, allergy.update, mm.MsgAllergy)
+    mm.MsgImmunization(msg) ->
+      sub_update(msg, model, immunization.update, mm.MsgImmunization)
     mm.MsgRegisterPatient(msg) ->
       sub_update(msg, model, registerpatient.update, mm.MsgRegisterPatient)
   }
@@ -275,7 +279,7 @@ fn view(model: Model) -> Element(Msg) {
                             }
                             let age = case pat.birth_date {
                               None -> ""
-                              Some(bd) -> bd
+                              Some(bd) -> bd |> primitive_types.date_to_string
                             }
                             let identifier = case pat.identifier {
                               [] -> ""
@@ -415,6 +419,7 @@ fn view(model: Model) -> Element(Msg) {
                       |> sub_view(mm.MsgAllergy)
                     mm.PatientImmunizations(immunization_form) ->
                       immunization.view(data, immunization_form)
+                      |> sub_view(mm.MsgImmunization)
                     mm.PatientOrders -> medication.view(data)
                     mm.PatientVitals -> vitals.view(data)
                     mm.PatientPhotos ->

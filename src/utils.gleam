@@ -1,3 +1,4 @@
+import fhir/primitive_types
 import fhir/r4us
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -29,12 +30,12 @@ pub fn humanname_to_string(name: r4us.Humanname) -> String {
           string.concat([
             "(",
             case p.start {
-              Some(s) -> s
+              Some(s) -> s |> primitive_types.datetime_to_string
               None -> "?"
             },
             " - ",
             case p.end {
-              Some(e) -> e
+              Some(e) -> e |> primitive_types.datetime_to_string
               None -> "?"
             },
           ])

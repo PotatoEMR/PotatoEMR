@@ -63,6 +63,7 @@ pub type PatientData {
   PatientData(
     patient: r4us.Patient,
     patient_allergies: List(r4us.Allergyintolerance),
+    patient_immunizations: List(r4us.Immunization),
     patient_medications: List(r4us.Medication),
     patient_observations: List(r4us.Observation),
   )
@@ -169,6 +170,7 @@ pub type Msg {
   UserSearchedPatient(String)
   ServerReturnedSearchPatients(Result(List(r4us.Patient), r4us_rsvp.Err))
   MsgAllergy(SubmsgAllergy)
+  MsgImmunization(SubmsgImmunization)
   MsgPhoto(SubmsgPhoto)
   MsgRegisterPatient(SubmsgRegisterPatient)
   MsgSettings(SubmsgSettings)
@@ -194,7 +196,9 @@ pub type SubmsgPhoto {
 pub type SubmsgAllergy {
   ServerCreatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
   ServerUpdatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
-  ServerDeletedAllergy(Result(r4us.Operationoutcome, r4us_rsvp.Err))
+  ServerDeletedAllergy(
+    Result(r4us_sansio.OperationoutcomeOrHTTP, r4us_rsvp.Err),
+  )
   UserSubmittedAllergyForm(
     Result(r4us.Allergyintolerance, Form(r4us.Allergyintolerance)),
   )
@@ -202,4 +206,19 @@ pub type SubmsgAllergy {
   UserClickedEditAllergy(String)
   UserClickedDeleteAllergy(String)
   UserClickedCloseAllergyForm
+}
+
+pub type SubmsgImmunization {
+  ServerCreatedImmunization(Result(r4us.Immunization, r4us_rsvp.Err))
+  ServerUpdatedImmunization(Result(r4us.Immunization, r4us_rsvp.Err))
+  ServerDeletedImmunization(
+    Result(r4us_sansio.OperationoutcomeOrHTTP, r4us_rsvp.Err),
+  )
+  UserSubmittedImmunizationForm(
+    Result(r4us.Immunization, Form(r4us.Immunization)),
+  )
+  UserClickedCreateImmunization
+  UserClickedEditImmunization(String)
+  UserClickedDeleteImmunization(String)
+  UserClickedCloseImmunizationForm
 }

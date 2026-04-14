@@ -2,6 +2,7 @@ import components.{
   CodingOption, btn, btn_nomsg, view_form_coding_select, view_form_input,
   view_form_select, view_form_textarea,
 }
+import fhir/primitive_types
 import fhir/r4us
 import fhir/r4us_rsvp
 import fhir/r4us_valuesets
@@ -135,7 +136,7 @@ pub fn edit(model: Model, edit_allergy_id: Option(String)) {
                     "recorded_date",
                     case allergy.recorded_date {
                       None -> ""
-                      Some(rd) -> rd
+                      Some(rd) -> rd |> primitive_types.datetime_to_string
                     },
                   )
                   // id is in form probably just so view knows if editing or creating
@@ -329,10 +330,18 @@ pub fn allergy_schema(allergy: r4us.Allergyintolerance) {
       )
     Error(_) -> None
   }
-  use recorded_date <- form.field(
+  use form_recorded_date <- form.field(
     "recorded_date",
     form.parse_optional(form.parse_string),
   )
+  let recorded_date = case form_recorded_date {
+    Some(rd) ->
+      case primitive_types.parse_datetime(rd) {
+        Ok(rd) -> Some(rd)
+        Error(_) -> None
+      }
+    None -> None
+  }
   form.success(
     r4us.Allergyintolerance(
       ..allergy,
@@ -403,7 +412,7 @@ pub fn view(
             h.td([a.class("p-2")], [
               case allergy.recorded_date {
                 None -> element.none()
-                Some(rd) -> h.text(rd)
+                Some(rd) -> h.text(rd |> primitive_types.datetime_to_string)
               },
             ]),
             h.td([a.class("p-2 flex gap-2")], [

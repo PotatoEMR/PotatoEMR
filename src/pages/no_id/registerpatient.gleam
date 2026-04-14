@@ -1,3 +1,4 @@
+import fhir/primitive_types
 import fhir/r4us
 import fhir/r4us_rsvp
 import fhir/r4us_valuesets
@@ -257,10 +258,18 @@ pub fn patient_schema() {
     _ -> [given]
   }
   use family <- form.field("last", form.parse_optional(form.parse_string))
-  use birth_date <- form.field(
+  use form_birth_date <- form.field(
     "birthdate",
     form.parse_optional(form.parse_string),
   )
+  let birth_date = case form_birth_date {
+    Some(bd) ->
+      case primitive_types.parse_date(bd) {
+        Ok(bd) -> Some(bd)
+        Error(_) -> None
+      }
+    None -> None
+  }
   use phone <- form.field("phone", form.parse_string)
   let telecom = case phone {
     "" -> []
