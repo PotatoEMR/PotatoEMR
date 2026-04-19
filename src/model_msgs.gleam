@@ -211,11 +211,14 @@ pub type SubmsgAllergy {
 
 pub type SubmsgVitals {
   UserClickedCreateVitals
+  UserClickedEditVitalsColumn(String)
+  UserClickedDeleteVitalsColumn(String)
   UserClickedCloseVitalsForm
   UserSubmittedVitalsForm(
     Result(List(r4us.Observation), Form(List(r4us.Observation))),
   )
   ServerReturnedVitalsBundle(Result(r4us.Bundle, r4us_rsvp.Err))
+  ServerReturnedVitalsDelete(String, Result(r4us.Bundle, r4us_rsvp.Err))
 }
 
 pub type SubmsgImmunization {

@@ -31,6 +31,21 @@ const vital_columns: List(#(String, String, String)) = [
   #("85354-9", "BP (mmHg)", ""),
 ]
 
+const time_column_style =
+  "width: 13rem; min-width: 13rem; max-width: 13rem; height: 3rem; min-height: 3rem; max-height: 3rem; padding: 0; vertical-align: middle;"
+const time_column_inner_style =
+  "width: 13rem; min-width: 13rem; max-width: 13rem; min-height: 3rem; max-height: 3rem; padding: 0.5rem; box-sizing: border-box; overflow: hidden;"
+const row_style = "height: 3rem; min-height: 3rem; max-height: 3rem;"
+const header_row_style = "height: 4.5rem; min-height: 4.5rem; max-height: 4.5rem;"
+const label_cell_style =
+  "height: 3rem; min-height: 3rem; max-height: 3rem; width: 14rem; min-width: 14rem; max-width: 14rem; padding: 0; vertical-align: middle;"
+const header_label_cell_style =
+  "height: 4.5rem; min-height: 4.5rem; max-height: 4.5rem; width: 14rem; min-width: 14rem; max-width: 14rem; padding: 0; vertical-align: middle;"
+const header_time_column_style =
+  "width: 13rem; min-width: 13rem; max-width: 13rem; height: 4.5rem; min-height: 4.5rem; max-height: 4.5rem; padding: 0; vertical-align: top;"
+const header_time_column_inner_style =
+  "width: 13rem; min-width: 13rem; max-width: 13rem; min-height: 4.5rem; max-height: 4.5rem; padding: 0.5rem; box-sizing: border-box; overflow: hidden;"
+
 fn is_vital_signs(obs: r4us.Observation) -> Bool {
   list.any(obs.category, fn(cat) {
     list.any(cat.coding, fn(c) { c.code == Some("vital-signs") })
@@ -68,6 +83,82 @@ fn format_time(s: String) -> String {
 
 fn format_float(f: Float) -> String {
   f |> float.to_precision(2) |> float.to_string
+}
+
+fn fixed_time_column_attrs(extra_class: String) {
+  [
+    a.class(extra_class),
+    a.attribute("style", time_column_style),
+  ]
+}
+
+fn fixed_time_column_inner(children: List(Element(msg))) -> Element(msg) {
+  h.div([
+    a.class("box-border"),
+    a.attribute("style", time_column_inner_style),
+  ], children)
+}
+
+fn fixed_header_time_column_attrs(extra_class: String) {
+  [
+    a.class(extra_class),
+    a.attribute("style", header_time_column_style),
+  ]
+}
+
+fn fixed_header_time_column_inner(children: List(Element(msg))) -> Element(msg) {
+  h.div([
+    a.class("box-border"),
+    a.attribute("style", header_time_column_inner_style),
+  ], children)
+}
+
+fn fixed_row_attrs(extra_class: String) {
+  [
+    a.class(extra_class),
+    a.attribute("style", row_style),
+  ]
+}
+
+fn fixed_header_row_attrs(extra_class: String) {
+  [
+    a.class(extra_class),
+    a.attribute("style", header_row_style),
+  ]
+}
+
+fn fixed_label_cell(label: String) -> Element(msg) {
+  h.th(
+    [
+      a.class("text-left border border-slate-700"),
+      a.attribute("style", label_cell_style),
+    ],
+    [
+      h.div([a.class("h-full px-2 overflow-hidden whitespace-nowrap flex items-center")], [
+        h.text(label),
+      ]),
+    ],
+  )
+}
+
+fn fixed_blank_header_cell() -> Element(msg) {
+  h.th(
+    [
+      a.class("border border-slate-700"),
+      a.attribute("style", header_label_cell_style),
+    ],
+    [h.div([a.class("h-full")], [])],
+  )
+}
+
+fn fixed_blank_footer_cell() -> Element(msg) {
+  h.td(
+    [
+      a.class("border border-slate-700"),
+      a.attribute("style", label_cell_style),
+    ],
+    [h.div([a.class("h-full")], [])],
+  )
 }
 
 fn quantity_to_string(q: r4us.Quantity) -> String {
@@ -128,6 +219,8 @@ fn cell_value(obs: r4us.Observation, code: String) -> String {
 pub fn update(msg, model: Model) {
   case msg {
     mm.UserClickedCreateVitals -> open_form(model)
+    mm.UserClickedEditVitalsColumn(time_key) -> open_edit(model, time_key)
+    mm.UserClickedDeleteVitalsColumn(time_key) -> delete_column(model, time_key)
     mm.UserClickedCloseVitalsForm -> set_form_state(model, mm.FormStateNone)
     mm.UserSubmittedVitalsForm(Ok(observations)) -> submit(model, observations)
     mm.UserSubmittedVitalsForm(Error(err)) ->
@@ -135,6 +228,65 @@ pub fn update(msg, model: Model) {
     mm.ServerReturnedVitalsBundle(Ok(bundle)) -> bundle_returned(model, bundle)
     mm.ServerReturnedVitalsBundle(Error(_)) ->
       set_form_state(model, mm.FormStateNone)
+    mm.ServerReturnedVitalsDelete(time_key, Ok(_)) ->
+      delete_column_done(model, time_key)
+    mm.ServerReturnedVitalsDelete(_, Error(_)) ->
+      set_form_state(model, mm.FormStateNone)
+  }
+}
+
+fn delete_column(model: Model, time_key: String) {
+  case model.route {
+    mm.RoutePatient(patient: mm.PatientLoadFound(data:), ..) -> {
+      let ids =
+        data.patient_observations
+        |> list.filter(fn(o) { is_vital_signs(o) && obs_time(o) == time_key })
+        |> list.filter_map(fn(o) {
+          case o.id {
+            Some(id) -> Ok(id)
+            None -> Error(Nil)
+          }
+        })
+      case ids {
+        [] -> #(model, effect.none())
+        _ -> {
+          let reqs =
+            list.map(ids, fn(id) {
+              r4us_sansio.any_delete_req(id, "Observation", model.client)
+            })
+          let eff =
+            r4us_rsvp.batch(
+              reqs,
+              r4us_sansio.Transaction,
+              model.client,
+              fn(res) { mm.ServerReturnedVitalsDelete(time_key, res) },
+            )
+          let #(model, _) = set_form_state(model, mm.FormStateLoading)
+          #(model, eff)
+        }
+      }
+    }
+    _ -> #(model, effect.none())
+  }
+}
+
+fn delete_column_done(model: Model, time_key: String) {
+  case model.route {
+    mm.RoutePatient(id:, patient: mm.PatientLoadFound(data:), page: _) -> {
+      let patient_observations =
+        list.filter(data.patient_observations, fn(o) {
+          case is_vital_signs(o) && obs_time(o) == time_key {
+            True -> False
+            False -> True
+          }
+        })
+      let patient =
+        mm.PatientLoadFound(mm.PatientData(..data, patient_observations:))
+      let route =
+        mm.RoutePatient(id:, patient:, page: mm.PatientVitals(mm.FormStateNone))
+      #(Model(..model, route:), effect.none())
+    }
+    _ -> set_form_state(model, mm.FormStateNone)
   }
 }
 
@@ -142,9 +294,82 @@ fn open_form(model: Model) {
   case patient_ref(model) {
     None -> #(model, effect.none())
     Some(ref) -> {
-      let f = vitals_schema(ref) |> form.new
+      let f = vitals_schema(ref, []) |> form.new
       set_form_state(model, mm.FormStateSome(f))
     }
+  }
+}
+
+fn open_edit(model: Model, time_key: String) {
+  case patient_ref(model), model.route {
+    Some(ref), mm.RoutePatient(patient: mm.PatientLoadFound(data:), ..) -> {
+      let existing =
+        data.patient_observations
+        |> list.filter(fn(o) { is_vital_signs(o) && obs_time(o) == time_key })
+      let f =
+        vitals_schema(ref, existing)
+        |> form.new
+        |> prefill_edit_form(existing, time_key)
+      set_form_state(model, mm.FormStateSome(f))
+    }
+    _, _ -> #(model, effect.none())
+  }
+}
+
+fn prefill_edit_form(
+  f: Form(a),
+  existing: List(r4us.Observation),
+  time_key: String,
+) -> Form(a) {
+  let f = form.add_string(f, "column_time", time_key)
+  let dt_str = case existing {
+    [first, ..] ->
+      case first.effective {
+        Some(r4us.ObservationEffectiveDatetime(effective: dt)) ->
+          primitive_types.datetime_to_string(dt) |> string.slice(0, 16)
+        _ -> ""
+      }
+    [] -> ""
+  }
+  let f = form.add_string(f, "effective_datetime", dt_str)
+  let simple_fields = [
+    #("8867-4", "heart_rate"),
+    #("9279-1", "respiratory_rate"),
+    #("2708-6", "oxygen_saturation"),
+    #("8310-5", "body_temperature"),
+    #("8302-2", "body_height"),
+    #("9843-4", "head_circumference"),
+    #("29463-7", "body_weight"),
+    #("39156-5", "bmi"),
+  ]
+  let f =
+    list.fold(simple_fields, f, fn(acc, field) {
+      let #(code, name) = field
+      case list.find(existing, fn(o) { obs_code(o) == code }) {
+        Ok(obs) ->
+          case obs.value {
+            Some(r4us.ObservationValueQuantity(value: q)) ->
+              case q.value {
+                Some(v) -> form.add_string(acc, name, format_float(v))
+                None -> acc
+              }
+            _ -> acc
+          }
+        Error(_) -> acc
+      }
+    })
+  case list.find(existing, fn(o) { obs_code(o) == "85354-9" }) {
+    Ok(bp_obs) ->
+      f
+      |> form.add_string(
+        "systolic",
+        find_component_value(bp_obs.component, "8480-6"),
+      )
+      |> form.add_string(
+        "diastolic",
+        find_component_value(bp_obs.component, "8462-4"),
+      )
+    Error(_) -> f
   }
 }
 
@@ -178,8 +403,11 @@ fn submit(model: Model, observations: List(r4us.Observation)) {
     [] -> set_form_state(model, mm.FormStateNone)
     _ -> {
       let reqs =
-        list.map(observations, fn(obs) {
-          r4us_sansio.observation_create_req(obs, model.client)
+        list.filter_map(observations, fn(obs) {
+          case obs.id {
+            None -> Ok(r4us_sansio.observation_create_req(obs, model.client))
+            Some(_) -> r4us_sansio.observation_update_req(obs, model.client)
+          }
         })
       let eff =
         r4us_rsvp.batch(
@@ -206,8 +434,21 @@ fn bundle_returned(model: Model, bundle: r4us.Bundle) {
   echo returned_obs
   case model.route {
     mm.RoutePatient(id:, patient: mm.PatientLoadFound(data:), page: _) -> {
-      let patient_observations =
-        list.append(data.patient_observations, returned_obs)
+      let returned_ids =
+        list.filter_map(returned_obs, fn(o) {
+          case o.id {
+            Some(id) -> Ok(id)
+            None -> Error(Nil)
+          }
+        })
+      let kept =
+        list.filter(data.patient_observations, fn(o) {
+          case o.id {
+            Some(id) -> list.contains(returned_ids, id) == False
+            None -> True
+          }
+        })
+      let patient_observations = list.append(kept, returned_obs)
       let patient =
         mm.PatientLoadFound(mm.PatientData(..data, patient_observations:))
       let route =
@@ -282,6 +523,7 @@ fn normalize_datetime(s: String) -> String {
 }
 
 fn make_quantity_obs(
+  existing: List(r4us.Observation),
   patient_ref: r4us.Reference,
   effective: Option(r4us.ObservationEffective),
   code: String,
@@ -289,11 +531,17 @@ fn make_quantity_obs(
   unit: String,
   value: Float,
 ) -> r4us.Observation {
+  let base = case list.find(existing, fn(o) { obs_code(o) == code }) {
+    Ok(e) -> e
+    Error(_) ->
+      r4us.observation_new(
+        code: loinc_cc(code, display),
+        status: r4us_valuesets.ObservationstatusFinal,
+      )
+  }
   r4us.Observation(
-    ..r4us.observation_new(
-      code: loinc_cc(code, display),
-      status: r4us_valuesets.ObservationstatusFinal,
-    ),
+    ..base,
+    code: loinc_cc(code, display),
     category: [vital_category()],
     subject: Some(patient_ref),
     effective:,
@@ -309,6 +557,7 @@ fn bp_component(code: String, display: String, value: Float) {
 }
 
 fn make_bp_obs(
+  existing: List(r4us.Observation),
   patient_ref: r4us.Reference,
   effective: Option(r4us.ObservationEffective),
   systolic: Option(Float),
@@ -319,10 +568,22 @@ fn make_bp_obs(
   let dia_comp =
     option.map(diastolic, bp_component("8462-4", "Diastolic blood pressure", _))
   let components = [sys_comp, dia_comp] |> option.values
+  let base = case list.find(existing, fn(o) { obs_code(o) == "85354-9" }) {
+    Ok(e) -> e
+    Error(_) ->
+      r4us.observation_new(
+        code: loinc_cc(
+          "85354-9",
+          "Blood pressure panel with all children optional",
+        ),
+        status: r4us_valuesets.ObservationstatusFinal,
+      )
+  }
   r4us.Observation(
-    ..r4us.observation_new(
-      code: loinc_cc("85354-9", "Blood pressure panel with all children optional"),
-      status: r4us_valuesets.ObservationstatusFinal,
+    ..base,
+    code: loinc_cc(
+      "85354-9",
+      "Blood pressure panel with all children optional",
     ),
     category: [vital_category()],
     subject: Some(patient_ref),
@@ -331,7 +592,10 @@ fn make_bp_obs(
   )
 }
 
-fn vitals_schema(patient_ref: r4us.Reference) {
+fn vitals_schema(
+  patient_ref: r4us.Reference,
+  existing: List(r4us.Observation),
+) {
   use dt <- form.field("effective_datetime", parse_required_datetime())
   let effective = Some(r4us.ObservationEffectiveDatetime(dt))
   use heart_rate <- form.field(
@@ -386,14 +650,23 @@ fn vitals_schema(patient_ref: r4us.Reference) {
   let simple_obs =
     list.filter_map(simple, fn(t) {
       case t.0 {
-        Some(v) -> Ok(make_quantity_obs(patient_ref, effective, t.1, t.2, t.3, v))
+        Some(v) ->
+          Ok(make_quantity_obs(
+            existing,
+            patient_ref,
+            effective,
+            t.1,
+            t.2,
+            t.3,
+            v,
+          ))
         None -> Error(Nil)
       }
     })
 
   let bp_obs = case systolic, diastolic {
     None, None -> []
-    _, _ -> [make_bp_obs(patient_ref, effective, systolic, diastolic)]
+    _, _ -> [make_bp_obs(existing, patient_ref, effective, systolic, diastolic)]
   }
 
   form.success(list.append(simple_obs, bp_obs))
@@ -428,62 +701,111 @@ pub fn view(
     _ -> None
   }
 
-  let time_header_cells = list.map(time_groups, fn(pair) {
-    utils.th_bordered(pair.0)
-  })
-  let form_header_cell = case form_opt {
-    Some(f) -> [form_datetime_cell(f)]
-    None -> []
+  let edit_time = case form_opt {
+    Some(f) -> form.field_value(f, "column_time")
+    None -> ""
+  }
+  let is_editing = edit_time != ""
+  let is_creating = case form_opt {
+    Some(_) -> edit_time == ""
+    None -> False
+  }
+
+  let time_header_cells =
+    list.map(time_groups, fn(pair) {
+      case form_opt, pair.0 == edit_time && is_editing {
+        Some(f), True -> form_datetime_cell(f)
+        _, _ ->
+          h.th(fixed_header_time_column_attrs("p-2 text-left border border-slate-700"), [
+            fixed_header_time_column_inner([
+              h.div([a.class("h-full overflow-hidden whitespace-nowrap flex items-center")], [
+                h.text(pair.0),
+              ]),
+            ]),
+          ])
+      }
+    })
+  let form_header_cell = case is_creating, form_opt {
+    True, Some(f) -> [form_datetime_cell(f)]
+    _, _ -> []
   }
   let head =
     h.tr(
-      [],
-      [utils.th_bordered(""), ..list.append(form_header_cell, time_header_cells)],
+      fixed_header_row_attrs(""),
+      [fixed_blank_header_cell(), ..list.append(form_header_cell, time_header_cells)],
     )
 
   let rows =
     list.map(vital_columns, fn(col) {
       let #(code, label, field_name) = col
-      let form_input_cells = case form_opt {
-        Some(f) -> [form_value_cell(f, code, field_name)]
-        None -> []
+      let form_input_cells = case is_creating, form_opt {
+        True, Some(f) -> [form_value_cell(f, code, field_name)]
+        _, _ -> []
       }
       let time_cells =
         list.map(time_groups, fn(pair) {
-          let obs_list = pair.1
-          let val = case list.find(obs_list, fn(o) { obs_code(o) == code }) {
-            Ok(obs) -> cell_value(obs, code)
-            Error(_) -> ""
+          case form_opt, pair.0 == edit_time && is_editing {
+            Some(f), True -> form_value_cell(f, code, field_name)
+            _, _ -> {
+              let val = case list.find(pair.1, fn(o) { obs_code(o) == code }) {
+                Ok(obs) -> cell_value(obs, code)
+                Error(_) -> ""
+              }
+              h.td(
+                fixed_time_column_attrs("p-2 text-left border border-slate-700"),
+                [
+                  fixed_time_column_inner([
+                    h.div([a.class("h-full overflow-hidden whitespace-nowrap flex items-center")], [
+                      h.text(val),
+                    ]),
+                  ]),
+                ],
+              )
+            }
           }
-          h.td([a.class("p-2 text-left border border-slate-700")], [h.text(val)])
         })
-      h.tr([a.class("border-b border-slate-700")], [
-        h.th([a.class("p-2 text-left border border-slate-700")], [h.text(label)]),
+      h.tr(fixed_row_attrs("border-b border-slate-700"), [
+        fixed_label_cell(label),
         ..list.append(form_input_cells, time_cells)
       ])
     })
 
-  let footer_rows = case form_opt {
-    None -> []
-    Some(_) -> {
-      let empty_time_cells =
-        list.map(time_groups, fn(_) {
-          h.td([a.class("border border-slate-700")], [])
-        })
-      [
-        h.tr([], [
-          h.td([a.class("border border-slate-700")], []),
-          h.td([a.class("p-2 border border-slate-700")], [
-            h.div([a.class("flex gap-2 justify-end")], [
-              btn_cancel("Cancel", on_click: mm.UserClickedCloseVitalsForm),
-              btn_nomsg("Save"),
+  let save_cancel =
+    fixed_time_column_inner([
+      h.div([a.class("flex gap-2 justify-end overflow-hidden")], [
+        btn_cancel("Cancel", on_click: mm.UserClickedCloseVitalsForm),
+        btn_nomsg("Save"),
+      ]),
+    ])
+
+  let form_footer_cell = case is_creating {
+    True ->
+      [h.td(fixed_time_column_attrs("p-2 border border-slate-700"), [save_cancel])]
+    False -> []
+  }
+  let time_footer_cells =
+    list.map(time_groups, fn(pair) {
+      let is_this_edit = pair.0 == edit_time && is_editing
+      let content = case is_this_edit, form_opt {
+        True, _ -> [save_cancel]
+        False, Some(_) -> []
+        False, None -> [
+          fixed_time_column_inner([
+            h.div([a.class("flex gap-2 overflow-hidden")], [
+              btn("Edit", on_click: mm.UserClickedEditVitalsColumn(pair.0)),
+              btn("Delete", on_click: mm.UserClickedDeleteVitalsColumn(pair.0)),
             ]),
           ]),
-          ..empty_time_cells
-        ]),
-      ]
-    }
-  }
+        ]
+      }
+      h.td(fixed_time_column_attrs("p-2 border border-slate-700"), content)
+    })
+  let footer_rows = [
+    h.tr(fixed_row_attrs(""), [
+      fixed_blank_footer_cell(),
+      ..list.append(form_footer_cell, time_footer_cells)
+    ]),
+  ]
 
   let is_loading = case vitals_form {
     mm.FormStateLoading -> True
@@ -491,7 +813,7 @@ pub fn view(
   }
 
   let table =
-    h.table([a.class("border-collapse border border-slate-700")], [
+    h.table([a.class("border-collapse border border-slate-700 table-fixed")], [
       h.thead([], [head]),
       h.tbody([], rows),
       h.tfoot([], footer_rows),
@@ -517,15 +839,10 @@ pub fn view(
     h.div([a.class("p-4")], [
       h.div([a.class("flex items-center gap-4 mb-4")], [
         h.h1([a.class("text-xl font-bold")], [h.text("Vital Signs")]),
-        case form_opt, is_loading {
-          None, False ->
-            btn(
-              "Create New Vital Signs Panel",
-              on_click: mm.UserClickedCreateVitals,
-            )
-          _, True -> h.span([a.class("text-sm")], [h.text("saving...")])
-          _, _ -> element.none()
-        },
+        btn(
+          "Create New Vital Signs Panel",
+          on_click: mm.UserClickedCreateVitals,
+        ),
       ]),
       h.div([a.class("overflow-x-auto")], [wrapped]),
     ]),
@@ -535,17 +852,26 @@ pub fn view(
 fn form_datetime_cell(f: Form(a)) -> Element(mm.SubmsgVitals) {
   let name = "effective_datetime"
   let errors = form.field_error_messages(f, name)
-  h.th([a.class("p-2 text-left border border-slate-700")], [
-    h.input([
-      a.class("bg-slate-800 border border-slate-700 rounded p-1 w-full"),
-      a.name(name),
-      a.type_("datetime-local"),
-      a.value(form.field_value(f, name)),
-    ]),
-    ..list.map(errors, fn(e) {
-      h.div([a.class("text-xs text-red-400")], [h.text(e)])
-    })
-  ])
+  h.th(
+    fixed_header_time_column_attrs("p-2 text-left border border-slate-700 align-top"),
+    [
+      fixed_header_time_column_inner([
+        h.input([
+          a.class("bg-slate-800 border border-slate-700 rounded"),
+          a.attribute(
+            "style",
+            "display: block; width: 100%; max-width: 100%; min-width: 0; height: 2rem; box-sizing: border-box;",
+          ),
+          a.name(name),
+          a.type_("datetime-local"),
+          a.value(form.field_value(f, name)),
+        ]),
+        ..list.map(errors, fn(e) {
+          h.div([a.class("text-xs text-red-400 leading-tight mt-1")], [h.text(e)])
+        })
+      ]),
+    ],
+  )
 }
 
 fn form_value_cell(
@@ -555,34 +881,38 @@ fn form_value_cell(
 ) -> Element(mm.SubmsgVitals) {
   case code {
     "85354-9" ->
-      h.td([a.class("p-2 border border-slate-700")], [
-        h.div([a.class("flex gap-1 items-center")], [
-          number_input(f, "systolic"),
-          h.span([], [h.text("/")]),
-          number_input(f, "diastolic"),
+      h.td(fixed_time_column_attrs("p-2 border border-slate-700 align-top"), [
+        fixed_time_column_inner([
+          h.div(
+            [
+              a.class("grid gap-1 items-center h-full"),
+              a.attribute(
+                "style",
+                "grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);",
+              ),
+            ],
+            [
+              number_input(f, "systolic"),
+              h.span([], [h.text("/")]),
+              number_input(f, "diastolic"),
+            ],
+          ),
         ]),
-        ..list.append(
-          list.map(form.field_error_messages(f, "systolic"), fn(e) {
-            h.div([a.class("text-xs text-red-400")], [h.text(e)])
-          }),
-          list.map(form.field_error_messages(f, "diastolic"), fn(e) {
-            h.div([a.class("text-xs text-red-400")], [h.text(e)])
-          }),
-        )
       ])
     _ ->
-      h.td([a.class("p-2 border border-slate-700")], [
-        number_input(f, field_name),
-        ..list.map(form.field_error_messages(f, field_name), fn(e) {
-          h.div([a.class("text-xs text-red-400")], [h.text(e)])
-        })
+      h.td(fixed_time_column_attrs("p-2 border border-slate-700 align-top"), [
+        fixed_time_column_inner([number_input(f, field_name)]),
       ])
   }
 }
 
 fn number_input(f: Form(a), name: String) -> Element(msg) {
   h.input([
-    a.class("bg-slate-800 border border-slate-700 rounded p-1 w-24"),
+    a.class("bg-slate-800 border border-slate-700 rounded w-full"),
+    a.attribute(
+      "style",
+      "display: block; width: 100%; max-width: 100%; min-width: 0; height: 2rem; box-sizing: border-box;",
+    ),
     a.name(name),
     a.type_("number"),
     a.step("any"),
