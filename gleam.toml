@@ -14,7 +14,7 @@ version = "1.0.0"
 
 [dependencies]
 gleam_stdlib = ">= 0.44.0 and < 2.0.0"
-fhir = ">= 0.2.0 and < 1.0.0"
+fhir = { path = "/home/david/git/gleam-fhir" }
 modem = ">= 2.1.2 and < 3.0.0"
 formal = ">= 3.0.1 and < 4.0.0"
 lustre = ">= 5.6.0 and < 6.0.0"

@@ -166,6 +166,10 @@ pub fn th(s) {
   h.th([a.class("p-2 text-left")], [h.text(s)])
 }
 
+pub fn th_bordered(s) {
+  h.th([a.class("p-2 text-left border border-slate-700")], [h.text(s)])
+}
+
 pub fn th_list(s) {
   s |> list.map(th)
 }

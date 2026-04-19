@@ -81,7 +81,7 @@ pub type RoutePatientPage {
   PatientAllergies(FormState(r4us.Allergyintolerance))
   PatientImmunizations(FormState(r4us.Immunization))
   PatientOrders
-  PatientVitals
+  PatientVitals(FormState(List(r4us.Observation)))
   PatientPhotos
 }
 
@@ -118,7 +118,7 @@ pub fn route_to_urlstring(route: Route) -> String {
         PatientOverview -> "overview"
         PatientAllergies(_) -> "allergies"
         PatientOrders -> "orders"
-        PatientVitals -> "vitals"
+        PatientVitals(_) -> "vitals"
         PatientPhotos -> "photos"
         PatientImmunizations(_) -> "immunizations"
       }
@@ -138,7 +138,7 @@ pub const pages_patient: List(#(String, RoutePatientPage)) = [
   #("allergies", PatientAllergies(FormStateNone)),
   #("immunizations", PatientImmunizations(FormStateNone)),
   #("orders", PatientOrders),
-  #("vitals", PatientVitals),
+  #("vitals", PatientVitals(FormStateNone)),
   #("photos", PatientPhotos),
 ]
 
@@ -171,6 +171,7 @@ pub type Msg {
   ServerReturnedSearchPatients(Result(List(r4us.Patient), r4us_rsvp.Err))
   MsgAllergy(SubmsgAllergy)
   MsgImmunization(SubmsgImmunization)
+  MsgVitals(SubmsgVitals)
   MsgPhoto(SubmsgPhoto)
   MsgRegisterPatient(SubmsgRegisterPatient)
   MsgSettings(SubmsgSettings)
@@ -206,6 +207,15 @@ pub type SubmsgAllergy {
   UserClickedEditAllergy(String)
   UserClickedDeleteAllergy(String)
   UserClickedCloseAllergyForm
+}
+
+pub type SubmsgVitals {
+  UserClickedCreateVitals
+  UserClickedCloseVitalsForm
+  UserSubmittedVitalsForm(
+    Result(List(r4us.Observation), Form(List(r4us.Observation))),
+  )
+  ServerReturnedVitalsBundle(Result(r4us.Bundle, r4us_rsvp.Err))
 }
 
 pub type SubmsgImmunization {

@@ -207,6 +207,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     mm.MsgAllergy(msg) -> sub_update(msg, model, allergy.update, mm.MsgAllergy)
     mm.MsgImmunization(msg) ->
       sub_update(msg, model, immunization.update, mm.MsgImmunization)
+    mm.MsgVitals(msg) -> sub_update(msg, model, vitals.update, mm.MsgVitals)
     mm.MsgRegisterPatient(msg) ->
       sub_update(msg, model, registerpatient.update, mm.MsgRegisterPatient)
   }
@@ -387,7 +388,7 @@ fn view(model: Model) -> Element(Msg) {
                 }
               },
             ),
-            h.div([a.class("flex-1 flex flex-col min-h-0")], [
+            h.div([a.class("flex-1 flex flex-col min-h-0 min-w-0")], [
               h.ul(
                 [a.class(nav_bar_class)],
                 mm.pages_patient
@@ -421,7 +422,9 @@ fn view(model: Model) -> Element(Msg) {
                       immunization.view(data, immunization_form)
                       |> sub_view(mm.MsgImmunization)
                     mm.PatientOrders -> medication.view(data)
-                    mm.PatientVitals -> vitals.view(data)
+                    mm.PatientVitals(vitals_form) ->
+                      vitals.view(data, vitals_form)
+                      |> sub_view(mm.MsgVitals)
                     mm.PatientPhotos ->
                       photo.view(model, data)
                       |> sub_view(mm.MsgPhoto)
