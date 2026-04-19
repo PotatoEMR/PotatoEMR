@@ -221,7 +221,7 @@ pub fn view_patient_photo_box(src, click_effect) {
     a.src(src),
     a.alt("Patient Photo"),
     a.class(
-      "w-48 h-48 object-cover rounded-full hover:opacity-50 transition-opacity cursor-pointer",
+      "w-48 h-48 object-cover rounded-full hover:opacity-50 transition-opacity cursor-pointer text-center leading-[12rem]",
     ),
     a.attribute("draggable", "false"),
   ]
