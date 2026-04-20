@@ -31,20 +31,21 @@ const vital_columns: List(#(String, String, String)) = [
   #("85354-9", "BP (mmHg)", ""),
 ]
 
-const time_column_style =
-  "width: 13rem; min-width: 13rem; max-width: 13rem; height: 3rem; min-height: 3rem; max-height: 3rem; padding: 0; vertical-align: middle;"
-const time_column_inner_style =
-  "width: 13rem; min-width: 13rem; max-width: 13rem; min-height: 3rem; max-height: 3rem; padding: 0.5rem; box-sizing: border-box; overflow: hidden;"
+const time_column_style = "width: 13rem; min-width: 13rem; max-width: 13rem; height: 3rem; min-height: 3rem; max-height: 3rem; padding: 0; vertical-align: middle;"
+
+const time_column_inner_style = "width: 13rem; min-width: 13rem; max-width: 13rem; min-height: 3rem; max-height: 3rem; padding: 0.5rem; box-sizing: border-box; overflow: hidden;"
+
 const row_style = "height: 3rem; min-height: 3rem; max-height: 3rem;"
+
 const header_row_style = "height: 4.5rem; min-height: 4.5rem; max-height: 4.5rem;"
-const label_cell_style =
-  "height: 3rem; min-height: 3rem; max-height: 3rem; width: 14rem; min-width: 14rem; max-width: 14rem; padding: 0; vertical-align: middle;"
-const header_label_cell_style =
-  "height: 4.5rem; min-height: 4.5rem; max-height: 4.5rem; width: 14rem; min-width: 14rem; max-width: 14rem; padding: 0; vertical-align: middle;"
-const header_time_column_style =
-  "width: 13rem; min-width: 13rem; max-width: 13rem; height: 4.5rem; min-height: 4.5rem; max-height: 4.5rem; padding: 0; vertical-align: top;"
-const header_time_column_inner_style =
-  "width: 13rem; min-width: 13rem; max-width: 13rem; min-height: 4.5rem; max-height: 4.5rem; padding: 0.5rem; box-sizing: border-box; overflow: hidden;"
+
+const label_cell_style = "height: 3rem; min-height: 3rem; max-height: 3rem; width: 14rem; min-width: 14rem; max-width: 14rem; padding: 0; vertical-align: middle;"
+
+const header_label_cell_style = "height: 4.5rem; min-height: 4.5rem; max-height: 4.5rem; width: 14rem; min-width: 14rem; max-width: 14rem; padding: 0; vertical-align: middle;"
+
+const header_time_column_style = "width: 13rem; min-width: 13rem; max-width: 13rem; height: 4.5rem; min-height: 4.5rem; max-height: 4.5rem; padding: 0; vertical-align: top;"
+
+const header_time_column_inner_style = "width: 13rem; min-width: 13rem; max-width: 13rem; min-height: 4.5rem; max-height: 4.5rem; padding: 0.5rem; box-sizing: border-box; overflow: hidden;"
 
 fn is_vital_signs(obs: r4us.Observation) -> Bool {
   list.any(obs.category, fn(cat) {
@@ -93,10 +94,13 @@ fn fixed_time_column_attrs(extra_class: String) {
 }
 
 fn fixed_time_column_inner(children: List(Element(msg))) -> Element(msg) {
-  h.div([
-    a.class("box-border"),
-    a.attribute("style", time_column_inner_style),
-  ], children)
+  h.div(
+    [
+      a.class("box-border"),
+      a.attribute("style", time_column_inner_style),
+    ],
+    children,
+  )
 }
 
 fn fixed_header_time_column_attrs(extra_class: String) {
@@ -107,10 +111,13 @@ fn fixed_header_time_column_attrs(extra_class: String) {
 }
 
 fn fixed_header_time_column_inner(children: List(Element(msg))) -> Element(msg) {
-  h.div([
-    a.class("box-border"),
-    a.attribute("style", header_time_column_inner_style),
-  ], children)
+  h.div(
+    [
+      a.class("box-border"),
+      a.attribute("style", header_time_column_inner_style),
+    ],
+    children,
+  )
 }
 
 fn fixed_row_attrs(extra_class: String) {
@@ -134,9 +141,16 @@ fn fixed_label_cell(label: String) -> Element(msg) {
       a.attribute("style", label_cell_style),
     ],
     [
-      h.div([a.class("h-full px-2 overflow-hidden whitespace-nowrap flex items-center")], [
-        h.text(label),
-      ]),
+      h.div(
+        [
+          a.class(
+            "h-full px-2 overflow-hidden whitespace-nowrap flex items-center",
+          ),
+        ],
+        [
+          h.text(label),
+        ],
+      ),
     ],
   )
 }
@@ -375,19 +389,13 @@ fn prefill_edit_form(
 
 fn patient_ref(model: Model) -> Option(r4us.Reference) {
   case model.route {
-    mm.RoutePatient(
-      patient: mm.PatientLoadFound(data:),
-      id: _,
-      page: _,
-    ) -> Some(utils.patient_to_reference(data.patient))
+    mm.RoutePatient(patient: mm.PatientLoadFound(data:), id: _, page: _) ->
+      Some(utils.patient_to_reference(data.patient))
     _ -> None
   }
 }
 
-fn set_form_state(
-  model: Model,
-  formstate: mm.FormState(List(r4us.Observation)),
-) {
+fn set_form_state(model: Model, formstate: mm.FormState(List(r4us.Observation))) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
     mm.RoutePatient(id:, patient:, page: _) -> {
@@ -466,16 +474,13 @@ const loinc_system = "http://loinc.org"
 const ucum_system = "http://unitsofmeasure.org"
 
 fn vital_category() -> r4us.Codeableconcept {
-  r4us.Codeableconcept(
-    ..r4us.codeableconcept_new(),
-    coding: [
-      utils.coding(
-        code: "vital-signs",
-        system: vital_signs_category_system,
-        display: "Vital Signs",
-      ),
-    ],
-  )
+  r4us.Codeableconcept(..r4us.codeableconcept_new(), coding: [
+    utils.coding(
+      code: "vital-signs",
+      system: vital_signs_category_system,
+      display: "Vital Signs",
+    ),
+  ])
 }
 
 fn loinc_cc(code: String, display: String) -> r4us.Codeableconcept {
@@ -552,7 +557,9 @@ fn make_quantity_obs(
 fn bp_component(code: String, display: String, value: Float) {
   r4us.ObservationComponent(
     ..r4us.observation_component_new(code: loinc_cc(code, display)),
-    value: Some(r4us.ObservationComponentValueQuantity(ucum_qty(value, "mm[Hg]"))),
+    value: Some(
+      r4us.ObservationComponentValueQuantity(ucum_qty(value, "mm[Hg]")),
+    ),
   )
 }
 
@@ -581,10 +588,7 @@ fn make_bp_obs(
   }
   r4us.Observation(
     ..base,
-    code: loinc_cc(
-      "85354-9",
-      "Blood pressure panel with all children optional",
-    ),
+    code: loinc_cc("85354-9", "Blood pressure panel with all children optional"),
     category: [vital_category()],
     subject: Some(patient_ref),
     effective:,
@@ -592,10 +596,7 @@ fn make_bp_obs(
   )
 }
 
-fn vitals_schema(
-  patient_ref: r4us.Reference,
-  existing: List(r4us.Observation),
-) {
+fn vitals_schema(patient_ref: r4us.Reference, existing: List(r4us.Observation)) {
   use dt <- form.field("effective_datetime", parse_required_datetime())
   let effective = Some(r4us.ObservationEffectiveDatetime(dt))
   use heart_rate <- form.field(
@@ -627,10 +628,7 @@ fn vitals_schema(
     form.parse_optional(form.parse_float),
   )
   use bmi <- form.field("bmi", form.parse_optional(form.parse_float))
-  use systolic <- form.field(
-    "systolic",
-    form.parse_optional(form.parse_float),
-  )
+  use systolic <- form.field("systolic", form.parse_optional(form.parse_float))
   use diastolic <- form.field(
     "diastolic",
     form.parse_optional(form.parse_float),
@@ -642,7 +640,12 @@ fn vitals_schema(
     #(oxygen_saturation, "2708-6", "Oxygen saturation in Arterial blood", "%"),
     #(body_temperature, "8310-5", "Body temperature", "Cel"),
     #(body_height, "8302-2", "Body height", "cm"),
-    #(head_circumference, "9843-4", "Head Occipital-frontal circumference", "cm"),
+    #(
+      head_circumference,
+      "9843-4",
+      "Head Occipital-frontal circumference",
+      "cm",
+    ),
     #(body_weight, "29463-7", "Body weight", "kg"),
     #(bmi, "39156-5", "Body mass index (BMI) [Ratio]", "kg/m2"),
   ]
@@ -716,13 +719,25 @@ pub fn view(
       case form_opt, pair.0 == edit_time && is_editing {
         Some(f), True -> form_datetime_cell(f)
         _, _ ->
-          h.th(fixed_header_time_column_attrs("p-2 text-left border border-slate-700"), [
-            fixed_header_time_column_inner([
-              h.div([a.class("h-full overflow-hidden whitespace-nowrap flex items-center")], [
-                h.text(pair.0),
+          h.th(
+            fixed_header_time_column_attrs(
+              "p-2 text-left border border-slate-700",
+            ),
+            [
+              fixed_header_time_column_inner([
+                h.div(
+                  [
+                    a.class(
+                      "h-full overflow-hidden whitespace-nowrap flex items-center",
+                    ),
+                  ],
+                  [
+                    h.text(pair.0),
+                  ],
+                ),
               ]),
-            ]),
-          ])
+            ],
+          )
       }
     })
   let form_header_cell = case is_creating, form_opt {
@@ -730,10 +745,10 @@ pub fn view(
     _, _ -> []
   }
   let head =
-    h.tr(
-      fixed_header_row_attrs(""),
-      [fixed_blank_header_cell(), ..list.append(form_header_cell, time_header_cells)],
-    )
+    h.tr(fixed_header_row_attrs(""), [
+      fixed_blank_header_cell(),
+      ..list.append(form_header_cell, time_header_cells)
+    ])
 
   let rows =
     list.map(vital_columns, fn(col) {
@@ -755,9 +770,16 @@ pub fn view(
                 fixed_time_column_attrs("p-2 text-left border border-slate-700"),
                 [
                   fixed_time_column_inner([
-                    h.div([a.class("h-full overflow-hidden whitespace-nowrap flex items-center")], [
-                      h.text(val),
-                    ]),
+                    h.div(
+                      [
+                        a.class(
+                          "h-full overflow-hidden whitespace-nowrap flex items-center",
+                        ),
+                      ],
+                      [
+                        h.text(val),
+                      ],
+                    ),
                   ]),
                 ],
               )
@@ -779,8 +801,9 @@ pub fn view(
     ])
 
   let form_footer_cell = case is_creating {
-    True ->
-      [h.td(fixed_time_column_attrs("p-2 border border-slate-700"), [save_cancel])]
+    True -> [
+      h.td(fixed_time_column_attrs("p-2 border border-slate-700"), [save_cancel]),
+    ]
     False -> []
   }
   let time_footer_cells =
@@ -806,11 +829,6 @@ pub fn view(
       ..list.append(form_footer_cell, time_footer_cells)
     ]),
   ]
-
-  let is_loading = case vitals_form {
-    mm.FormStateLoading -> True
-    _ -> False
-  }
 
   let table =
     h.table([a.class("border-collapse border border-slate-700 table-fixed")], [
@@ -853,7 +871,9 @@ fn form_datetime_cell(f: Form(a)) -> Element(mm.SubmsgVitals) {
   let name = "effective_datetime"
   let errors = form.field_error_messages(f, name)
   h.th(
-    fixed_header_time_column_attrs("p-2 text-left border border-slate-700 align-top"),
+    fixed_header_time_column_attrs(
+      "p-2 text-left border border-slate-700 align-top",
+    ),
     [
       fixed_header_time_column_inner([
         h.input([
@@ -867,7 +887,9 @@ fn form_datetime_cell(f: Form(a)) -> Element(mm.SubmsgVitals) {
           a.value(form.field_value(f, name)),
         ]),
         ..list.map(errors, fn(e) {
-          h.div([a.class("text-xs text-red-400 leading-tight mt-1")], [h.text(e)])
+          h.div([a.class("text-xs text-red-400 leading-tight mt-1")], [
+            h.text(e),
+          ])
         })
       ]),
     ],

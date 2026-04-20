@@ -65,6 +65,8 @@ pub type PatientData {
     patient_allergies: List(r4us.Allergyintolerance),
     patient_immunizations: List(r4us.Immunization),
     patient_medications: List(r4us.Medication),
+    patient_medication_requests: List(r4us.Medicationrequest),
+    patient_medication_statements: List(r4us.Medicationstatement),
     patient_observations: List(r4us.Observation),
   )
 }
@@ -80,7 +82,8 @@ pub type RoutePatientPage {
   PatientOverview
   PatientAllergies(FormState(r4us.Allergyintolerance))
   PatientImmunizations(FormState(r4us.Immunization))
-  PatientOrders
+  PatientMedications(FormState(r4us.Medicationstatement))
+  PatientOrders(FormState(r4us.Medicationrequest))
   PatientVitals(FormState(List(r4us.Observation)))
   PatientPhotos
 }
@@ -117,7 +120,8 @@ pub fn route_to_urlstring(route: Route) -> String {
       let ending = case page {
         PatientOverview -> "overview"
         PatientAllergies(_) -> "allergies"
-        PatientOrders -> "orders"
+        PatientMedications(_) -> "medications"
+        PatientOrders(_) -> "orders"
         PatientVitals(_) -> "vitals"
         PatientPhotos -> "photos"
         PatientImmunizations(_) -> "immunizations"
@@ -137,7 +141,8 @@ pub const pages_patient: List(#(String, RoutePatientPage)) = [
   #("overview", PatientOverview),
   #("allergies", PatientAllergies(FormStateNone)),
   #("immunizations", PatientImmunizations(FormStateNone)),
-  #("orders", PatientOrders),
+  #("medications", PatientMedications(FormStateNone)),
+  #("orders", PatientOrders(FormStateNone)),
   #("vitals", PatientVitals(FormStateNone)),
   #("photos", PatientPhotos),
 ]
@@ -171,6 +176,8 @@ pub type Msg {
   ServerReturnedSearchPatients(Result(List(r4us.Patient), r4us_rsvp.Err))
   MsgAllergy(SubmsgAllergy)
   MsgImmunization(SubmsgImmunization)
+  MsgMedication(SubmsgMedication)
+  MsgOrder(SubmsgOrder)
   MsgVitals(SubmsgVitals)
   MsgPhoto(SubmsgPhoto)
   MsgRegisterPatient(SubmsgRegisterPatient)
@@ -219,6 +226,34 @@ pub type SubmsgVitals {
   )
   ServerReturnedVitalsBundle(Result(r4us.Bundle, r4us_rsvp.Err))
   ServerReturnedVitalsDelete(String, Result(r4us.Bundle, r4us_rsvp.Err))
+}
+
+pub type SubmsgMedication {
+  ServerCreatedMedication(Result(r4us.Medicationstatement, r4us_rsvp.Err))
+  ServerUpdatedMedication(Result(r4us.Medicationstatement, r4us_rsvp.Err))
+  ServerDeletedMedication(
+    Result(r4us_sansio.OperationoutcomeOrHTTP, r4us_rsvp.Err),
+  )
+  UserSubmittedMedicationForm(
+    Result(r4us.Medicationstatement, Form(r4us.Medicationstatement)),
+  )
+  UserClickedCreateMedication
+  UserClickedEditMedication(String)
+  UserClickedDeleteMedication(String)
+  UserClickedCloseMedicationForm
+}
+
+pub type SubmsgOrder {
+  ServerCreatedOrder(Result(r4us.Medicationrequest, r4us_rsvp.Err))
+  ServerUpdatedOrder(Result(r4us.Medicationrequest, r4us_rsvp.Err))
+  ServerDeletedOrder(Result(r4us_sansio.OperationoutcomeOrHTTP, r4us_rsvp.Err))
+  UserSubmittedOrderForm(
+    Result(r4us.Medicationrequest, Form(r4us.Medicationrequest)),
+  )
+  UserClickedCreateOrder
+  UserClickedEditOrder(String)
+  UserClickedDeleteOrder(String)
+  UserClickedCloseOrderForm
 }
 
 pub type SubmsgImmunization {

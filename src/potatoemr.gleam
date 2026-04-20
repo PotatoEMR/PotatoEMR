@@ -20,7 +20,8 @@ import pages/no_id/registerpatient
 import pages/no_id/settings
 import pages/patient/allergy
 import pages/patient/immunization
-import pages/patient/medication
+import pages/patient/medications
+import pages/patient/orders
 import pages/patient/overview
 import pages/patient/photo
 import pages/patient/vitals
@@ -191,6 +192,8 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
             patient_allergies: resources.allergyintolerance,
             patient_immunizations: resources.immunization,
             patient_medications: resources.medication,
+            patient_medication_requests: resources.medicationrequest,
+            patient_medication_statements: resources.medicationstatement,
             patient_observations: resources.observation,
           ))
       }
@@ -207,6 +210,9 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     mm.MsgAllergy(msg) -> sub_update(msg, model, allergy.update, mm.MsgAllergy)
     mm.MsgImmunization(msg) ->
       sub_update(msg, model, immunization.update, mm.MsgImmunization)
+    mm.MsgMedication(msg) ->
+      sub_update(msg, model, medications.update, mm.MsgMedication)
+    mm.MsgOrder(msg) -> sub_update(msg, model, orders.update, mm.MsgOrder)
     mm.MsgVitals(msg) -> sub_update(msg, model, vitals.update, mm.MsgVitals)
     mm.MsgRegisterPatient(msg) ->
       sub_update(msg, model, registerpatient.update, mm.MsgRegisterPatient)
@@ -421,7 +427,12 @@ fn view(model: Model) -> Element(Msg) {
                     mm.PatientImmunizations(immunization_form) ->
                       immunization.view(data, immunization_form)
                       |> sub_view(mm.MsgImmunization)
-                    mm.PatientOrders -> medication.view(data)
+                    mm.PatientMedications(medication_form) ->
+                      medications.view(data, medication_form)
+                      |> sub_view(mm.MsgMedication)
+                    mm.PatientOrders(order_form) ->
+                      orders.view(data, order_form)
+                      |> sub_view(mm.MsgOrder)
                     mm.PatientVitals(vitals_form) ->
                       vitals.view(data, vitals_form)
                       |> sub_view(mm.MsgVitals)

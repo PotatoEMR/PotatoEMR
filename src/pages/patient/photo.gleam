@@ -1,19 +1,16 @@
 import fhir/r4us
 import fhir/r4us_rsvp
-import fhir/r4us_valuesets
 import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/list
-import gleam/option.{type Option, None, Some}
+import gleam/option.{Some}
 import gleam/result
 import gleam/string
-import gleam/uri
 import lustre
 import lustre/attribute.{type Attribute} as a
-import lustre/effect.{type Effect}
-import lustre/element.{type Element}
+import lustre/effect
+import lustre/element
 import lustre/element/html as h
-import lustre/element/svg
 import lustre/event
 import model_msgs.{type Model, Model} as mm
 import utils
