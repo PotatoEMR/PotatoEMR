@@ -135,7 +135,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
             r4us_rsvp.search_any(
               "_id="
                 <> id
-                <> "&_revinclude=AllergyIntolerance:patient&_revinclude=Immunization:patient&_revinclude=MedicationRequest:patient&_revinclude=MedicationStatement:patient&_revinclude=Observation:patient&_revinclude=Condition:patient&_revinclude=Encounter:patient",
+                <> "&_revinclude=AllergyIntolerance:patient&_revinclude=DocumentReference:patient&_revinclude=Immunization:patient&_revinclude=MedicationRequest:patient&_revinclude=MedicationStatement:patient&_revinclude=Observation:patient&_revinclude=Condition:patient&_revinclude=Encounter:patient",
               "Patient",
               model.client,
               mm.ServerReturnedPatientEverything,
@@ -192,6 +192,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
           mm.PatientLoadFound(mm.PatientData(
             patient: first,
             patient_allergies: resources.allergyintolerance,
+            patient_documentreferences: resources.documentreference,
             patient_encounters: resources.encounter,
             patient_immunizations: resources.immunization,
             patient_medications: resources.medication,

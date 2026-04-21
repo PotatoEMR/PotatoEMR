@@ -63,12 +63,20 @@ pub type PatientData {
   PatientData(
     patient: r4us.Patient,
     patient_allergies: List(r4us.Allergyintolerance),
+    patient_documentreferences: List(r4us.Documentreference),
     patient_encounters: List(r4us.Encounter),
     patient_immunizations: List(r4us.Immunization),
     patient_medications: List(r4us.Medication),
     patient_medication_requests: List(r4us.Medicationrequest),
     patient_medication_statements: List(r4us.Medicationstatement),
     patient_observations: List(r4us.Observation),
+  )
+}
+
+pub type EncounterNote {
+  EncounterNote(
+    encounter: r4us.Encounter,
+    note: Option(r4us.Documentreference),
   )
 }
 
@@ -83,7 +91,7 @@ pub type RoutePatientPage {
   PatientOverview
   PatientDemographics(FormState(r4us.Patient))
   PatientAllergies(FormState(r4us.Allergyintolerance))
-  PatientEncounters(FormState(r4us.Encounter))
+  PatientEncounters(FormState(EncounterNote))
   PatientImmunizations(FormState(r4us.Immunization))
   PatientMedications(FormState(r4us.Medicationstatement))
   PatientOrders(FormState(r4us.Medicationrequest))
@@ -285,12 +293,22 @@ pub type SubmsgOrder {
 }
 
 pub type SubmsgEncounter {
-  ServerCreatedEncounter(Result(r4us.Encounter, r4us_rsvp.Err))
-  ServerUpdatedEncounter(Result(r4us.Encounter, r4us_rsvp.Err))
+  ServerCreatedEncounter(
+    Result(r4us.Encounter, r4us_rsvp.Err),
+    Option(r4us.Documentreference),
+  )
+  ServerUpdatedEncounter(
+    Result(r4us.Encounter, r4us_rsvp.Err),
+    Option(r4us.Documentreference),
+  )
+  ServerSavedEncounterNote(Result(r4us.Documentreference, r4us_rsvp.Err))
+  ServerDeletedEncounterNote(
+    Result(r4us_sansio.OperationoutcomeOrHTTP, r4us_rsvp.Err),
+  )
   ServerDeletedEncounter(
     Result(r4us_sansio.OperationoutcomeOrHTTP, r4us_rsvp.Err),
   )
-  UserSubmittedEncounterForm(Result(r4us.Encounter, Form(r4us.Encounter)))
+  UserSubmittedEncounterForm(Result(EncounterNote, Form(EncounterNote)))
   UserClickedCreateEncounter
   UserClickedEditEncounter(String)
   UserClickedDeleteEncounter(String)
