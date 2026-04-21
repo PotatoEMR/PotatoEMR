@@ -13,7 +13,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import lustre/attribute as a
 import lustre/effect.{type Effect}
-import lustre/element.{type Element}
+import lustre/element
 import lustre/element/html as h
 import lustre/event
 import model_msgs.{type Model, Model} as mm
@@ -22,11 +22,14 @@ import utils
 
 pub fn update(msg, model) {
   case msg {
-    mm.ServerCreatedImmunization(Ok(imm)) -> server_created(model, imm)
-    mm.ServerCreatedImmunization(Error(_)) -> panic as "err 1"
-    mm.ServerUpdatedImmunization(Ok(imm)) -> server_updated(model, imm)
-    mm.ServerUpdatedImmunization(Error(_)) -> panic as "err 2"
-    mm.ServerDeletedImmunization(_) -> #(model, effect.none())
+    mm.ServerCreatedImmunization(Ok(imm), _) -> server_created(model, imm)
+    mm.ServerCreatedImmunization(Error(err), submitted_form) ->
+      server_error(model, submitted_form, err)
+    mm.ServerUpdatedImmunization(Ok(imm), _) -> server_updated(model, imm)
+    mm.ServerUpdatedImmunization(Error(err), submitted_form) ->
+      server_error(model, submitted_form, err)
+    mm.ServerDeletedImmunization(Ok(_)) -> #(model, effect.none())
+    mm.ServerDeletedImmunization(Error(_)) -> #(model, effect.none())
     mm.UserClickedCreateImmunization -> edit(model, None)
     mm.UserClickedEditImmunization(id) -> edit(model, Some(id))
     mm.UserClickedDeleteImmunization(id) -> delete(model, id)
@@ -42,7 +45,7 @@ pub fn server_created(
 ) -> #(Model, Effect(a)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> {
+    mm.RoutePatient(id:, page: _, patient:) -> {
       let new_pat = case patient {
         mm.PatientLoadFound(data:) -> {
           let patient_immunizations =
@@ -65,7 +68,7 @@ pub fn server_updated(
 ) -> #(Model, Effect(a)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> {
+    mm.RoutePatient(id:, page: _, patient:) -> {
       let new_pat = case patient {
         mm.PatientLoadFound(data:) -> {
           let patient_immunizations =
@@ -91,7 +94,7 @@ pub fn server_updated(
 pub fn edit(model: Model, edit_imm_id: Option(String)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id: pat_id, patient:, page:) ->
+    mm.RoutePatient(id: pat_id, patient:, page: _) ->
       case patient {
         mm.PatientLoadFound(data) -> {
           case edit_imm_id {
@@ -164,8 +167,29 @@ pub fn form_to_model(imm_form, model, pat_id, patient) {
     |> mm.FormStateSome
     |> mm.PatientImmunizations
   let route = mm.RoutePatient(id: pat_id, patient:, page: imm_form)
-  let model = Model(..model, route:)
-  #(model, effect.none())
+  #(Model(..model, route:), effect.none())
+}
+
+pub fn server_error(
+  model: Model,
+  submitted_form: Form(r4us.Immunization),
+  err: r4us_rsvp.Err,
+) -> #(Model, Effect(a)) {
+  case model.route {
+    mm.RouteNoId(_) -> #(model, effect.none())
+    mm.RoutePatient(id:, page: _, patient:) -> {
+      let imm_form =
+        submitted_form
+        |> form.add_error(
+          "vaccine_code",
+          form.CustomError("Server error: " <> utils.err_to_string(err)),
+        )
+        |> mm.FormStateSome
+        |> mm.PatientImmunizations
+      let route = mm.RoutePatient(id:, patient:, page: imm_form)
+      #(Model(..model, route:), effect.none())
+    }
+  }
 }
 
 pub fn submit(model: Model, form_imm: r4us.Immunization) {
@@ -174,6 +198,10 @@ pub fn submit(model: Model, form_imm: r4us.Immunization) {
     mm.RoutePatient(id:, patient:, page:) ->
       case patient {
         mm.PatientLoadFound(data) -> {
+          let submitted_form = case page {
+            mm.PatientImmunizations(mm.FormStateSome(f)) -> f
+            _ -> form.new(immunization_schema(form_imm))
+          }
           let imm_with_patient =
             r4us.Immunization(
               ..form_imm,
@@ -184,13 +212,17 @@ pub fn submit(model: Model, form_imm: r4us.Immunization) {
               r4us_rsvp.immunization_create(
                 imm_with_patient,
                 model.client,
-                mm.ServerCreatedImmunization,
+                fn(result) {
+                  mm.ServerCreatedImmunization(result, submitted_form)
+                },
               )
             Some(_) ->
               r4us_rsvp.immunization_update(
                 imm_with_patient,
                 model.client,
-                mm.ServerUpdatedImmunization,
+                fn(result) {
+                  mm.ServerUpdatedImmunization(result, submitted_form)
+                },
               )
               |> result.unwrap(effect.none())
           }
@@ -207,13 +239,13 @@ pub fn submit(model: Model, form_imm: r4us.Immunization) {
 pub fn set_form_state(model model, id id, patient patient, formstate formstate) {
   let imm_form = mm.PatientImmunizations(formstate)
   let route = mm.RoutePatient(id:, patient:, page: imm_form)
-  let model = Model(..model, route:)
+  Model(..model, route:)
 }
 
 pub fn delete(model: Model, imm_id: String) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, patient:, page:) ->
+    mm.RoutePatient(id:, patient:, page: _) ->
       case patient {
         mm.PatientLoadFound(data) -> {
           case
@@ -256,7 +288,7 @@ pub fn delete(model: Model, imm_id: String) {
 pub fn close_form(model: Model) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, patient:, page:) -> #(
+    mm.RoutePatient(id:, patient:, page: _) -> #(
       model |> set_form_state(id:, patient:, formstate: mm.FormStateNone),
       effect.none(),
     )
@@ -266,7 +298,7 @@ pub fn close_form(model: Model) {
 pub fn form_errors(model: Model, err: Form(r4us.Immunization)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> #(
+    mm.RoutePatient(id:, page: _, patient:) -> #(
       Model(
         ..model,
         route: mm.RoutePatient(
@@ -523,7 +555,10 @@ pub fn view(
                   ),
                   view_form_textarea(imm_form, name: "note", label: "note"),
                   h.div([a.class("w-full flex justify-end gap-2")], [
-                    btn_cancel("Cancel", on_click: mm.UserClickedCloseImmunizationForm),
+                    btn_cancel(
+                      "Cancel",
+                      on_click: mm.UserClickedCloseImmunizationForm,
+                    ),
                     btn_nomsg("Save Immunization"),
                   ]),
                 ],

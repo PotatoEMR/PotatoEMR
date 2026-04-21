@@ -389,7 +389,7 @@ fn view(model: Model) -> Element(Msg) {
                         href(mm.RoutePatient(
                           id:,
                           patient:,
-                          page: mm.PatientPhotos,
+                          page: mm.PatientPhotos(None),
                         )),
                       ],
                       [photo],
@@ -406,7 +406,12 @@ fn view(model: Model) -> Element(Msg) {
               h.ul(
                 [a.class(nav_bar_class)],
                 mm.pages_patient
-                  |> list.filter(fn(x) { x.1 != mm.PatientPhotos })
+                  |> list.filter(fn(x) {
+                    case x.1 {
+                      mm.PatientPhotos(_) -> False
+                      _ -> True
+                    }
+                  })
                   |> list.map(fn(link) {
                     view_header_link(
                       current: model.route,
@@ -450,7 +455,7 @@ fn view(model: Model) -> Element(Msg) {
                     mm.PatientVitals(vitals_form) ->
                       vitals.view(data, vitals_form)
                       |> sub_view(mm.MsgVitals)
-                    mm.PatientPhotos ->
+                    mm.PatientPhotos(_) ->
                       photo.view(model, data)
                       |> sub_view(mm.MsgPhoto)
                   })

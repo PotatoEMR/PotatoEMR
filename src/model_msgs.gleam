@@ -1,26 +1,12 @@
 import fhir/r4us
 import fhir/r4us_rsvp
 import fhir/r4us_sansio
-import fhir/r4us_valuesets
 import formal/form.{type Form}
 import gleam/dict
 import gleam/dynamic
-import gleam/dynamic/decode
-import gleam/int
-import gleam/list
-import gleam/option.{type Option, None, Some}
-import gleam/result
-import gleam/string
+import gleam/option.{type Option, None}
 import gleam/uri.{type Uri}
-import lustre
 import lustre/attribute.{type Attribute} as a
-import lustre/effect.{type Effect}
-import lustre/element.{type Element}
-import lustre/element/html as h
-import lustre/element/svg
-import lustre/event
-import modem
-import utils.{opt_elt}
 
 // MODEL -----------------------------------------------------------------------
 
@@ -73,13 +59,6 @@ pub type PatientData {
   )
 }
 
-pub type EncounterNote {
-  EncounterNote(
-    encounter: r4us.Encounter,
-    note: Option(r4us.Documentreference),
-  )
-}
-
 // while you could just stick these directly in route
 // separating makes update easier to set model patient id
 // without duplicating set id for each patient page
@@ -96,7 +75,11 @@ pub type RoutePatientPage {
   PatientMedications(FormState(r4us.Medicationstatement))
   PatientOrders(FormState(r4us.Medicationrequest))
   PatientVitals(FormState(List(r4us.Observation)))
-  PatientPhotos
+  PatientPhotos(Option(r4us_rsvp.Err))
+}
+
+pub type EncounterNote {
+  EncounterNote(encounter: r4us.Encounter, note: Option(r4us.Documentreference))
 }
 
 // similarly when update goes to these routes
@@ -136,7 +119,7 @@ pub fn route_to_urlstring(route: Route) -> String {
         PatientMedications(_) -> "medications"
         PatientOrders(_) -> "orders"
         PatientVitals(_) -> "vitals"
-        PatientPhotos -> "photos"
+        PatientPhotos(_) -> "photos"
         PatientImmunizations(_) -> "immunizations"
       }
       "/patient/" <> id <> "/" <> ending
@@ -159,7 +142,7 @@ pub const pages_patient: List(#(String, RoutePatientPage)) = [
   #("medications", PatientMedications(FormStateNone)),
   #("orders", PatientOrders(FormStateNone)),
   #("vitals", PatientVitals(FormStateNone)),
-  #("photos", PatientPhotos),
+  #("photos", PatientPhotos(None)),
 ]
 
 pub fn uri_to_route(uri: Uri) -> Route {
@@ -225,7 +208,10 @@ pub type SubmsgPhoto {
 }
 
 pub type SubmsgDemographics {
-  ServerUpdatedPatientDemographics(Result(r4us.Patient, r4us_rsvp.Err))
+  ServerUpdatedPatientDemographics(
+    Result(r4us.Patient, r4us_rsvp.Err),
+    Form(r4us.Patient),
+  )
   UserClickedEditDemographics
   UserClickedCloseDemographicsForm
   UserClickedAddDemographicsName(List(#(String, String)))
@@ -238,8 +224,14 @@ pub type SubmsgDemographics {
 }
 
 pub type SubmsgAllergy {
-  ServerCreatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
-  ServerUpdatedAllergy(Result(r4us.Allergyintolerance, r4us_rsvp.Err))
+  ServerCreatedAllergy(
+    Result(r4us.Allergyintolerance, r4us_rsvp.Err),
+    Form(r4us.Allergyintolerance),
+  )
+  ServerUpdatedAllergy(
+    Result(r4us.Allergyintolerance, r4us_rsvp.Err),
+    Form(r4us.Allergyintolerance),
+  )
   ServerDeletedAllergy(
     Result(r4us_sansio.OperationoutcomeOrHTTP, r4us_rsvp.Err),
   )
@@ -260,13 +252,22 @@ pub type SubmsgVitals {
   UserSubmittedVitalsForm(
     Result(List(r4us.Observation), Form(List(r4us.Observation))),
   )
-  ServerReturnedVitalsBundle(Result(r4us.Bundle, r4us_rsvp.Err))
+  ServerReturnedVitalsBundle(
+    Result(r4us.Bundle, r4us_rsvp.Err),
+    Form(List(r4us.Observation)),
+  )
   ServerReturnedVitalsDelete(String, Result(r4us.Bundle, r4us_rsvp.Err))
 }
 
 pub type SubmsgMedication {
-  ServerCreatedMedication(Result(r4us.Medicationstatement, r4us_rsvp.Err))
-  ServerUpdatedMedication(Result(r4us.Medicationstatement, r4us_rsvp.Err))
+  ServerCreatedMedication(
+    Result(r4us.Medicationstatement, r4us_rsvp.Err),
+    Form(r4us.Medicationstatement),
+  )
+  ServerUpdatedMedication(
+    Result(r4us.Medicationstatement, r4us_rsvp.Err),
+    Form(r4us.Medicationstatement),
+  )
   ServerDeletedMedication(
     Result(r4us_sansio.OperationoutcomeOrHTTP, r4us_rsvp.Err),
   )
@@ -280,8 +281,14 @@ pub type SubmsgMedication {
 }
 
 pub type SubmsgOrder {
-  ServerCreatedOrder(Result(r4us.Medicationrequest, r4us_rsvp.Err))
-  ServerUpdatedOrder(Result(r4us.Medicationrequest, r4us_rsvp.Err))
+  ServerCreatedOrder(
+    Result(r4us.Medicationrequest, r4us_rsvp.Err),
+    Form(r4us.Medicationrequest),
+  )
+  ServerUpdatedOrder(
+    Result(r4us.Medicationrequest, r4us_rsvp.Err),
+    Form(r4us.Medicationrequest),
+  )
   ServerDeletedOrder(Result(r4us_sansio.OperationoutcomeOrHTTP, r4us_rsvp.Err))
   UserSubmittedOrderForm(
     Result(r4us.Medicationrequest, Form(r4us.Medicationrequest)),
@@ -296,10 +303,12 @@ pub type SubmsgEncounter {
   ServerCreatedEncounter(
     Result(r4us.Encounter, r4us_rsvp.Err),
     Option(r4us.Documentreference),
+    Form(EncounterNote),
   )
   ServerUpdatedEncounter(
     Result(r4us.Encounter, r4us_rsvp.Err),
     Option(r4us.Documentreference),
+    Form(EncounterNote),
   )
   ServerSavedEncounterNote(Result(r4us.Documentreference, r4us_rsvp.Err))
   ServerDeletedEncounterNote(
@@ -316,8 +325,14 @@ pub type SubmsgEncounter {
 }
 
 pub type SubmsgImmunization {
-  ServerCreatedImmunization(Result(r4us.Immunization, r4us_rsvp.Err))
-  ServerUpdatedImmunization(Result(r4us.Immunization, r4us_rsvp.Err))
+  ServerCreatedImmunization(
+    Result(r4us.Immunization, r4us_rsvp.Err),
+    Form(r4us.Immunization),
+  )
+  ServerUpdatedImmunization(
+    Result(r4us.Immunization, r4us_rsvp.Err),
+    Form(r4us.Immunization),
+  )
   ServerDeletedImmunization(
     Result(r4us_sansio.OperationoutcomeOrHTTP, r4us_rsvp.Err),
   )

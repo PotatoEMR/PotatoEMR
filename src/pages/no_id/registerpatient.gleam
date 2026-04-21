@@ -8,13 +8,15 @@ import lustre/element/html as h
 import model_msgs.{type Model, Model} as mm
 import modem
 import pages/patient/demographics
+import utils
 
 pub fn update(msg, model) {
   case msg {
     mm.UserClickedRegisterPatient(Ok(newpat)) -> create(model, newpat)
     mm.UserClickedRegisterPatient(Error(err)) -> form_errors(model, err)
     mm.UserClickedAddRegisterPatientName(values) -> add_name(model, values)
-    mm.UserClickedDeleteRegisterPatientName(values) -> delete_name(model, values)
+    mm.UserClickedDeleteRegisterPatientName(values) ->
+      delete_name(model, values)
     mm.UserClickedAddRegisterPatientRecordedGender(values) ->
       add_recorded_gender(model, values)
     mm.UserClickedDeleteRegisterPatientRecordedGender(values) ->
@@ -70,7 +72,8 @@ fn delete_identifier(model: Model, values: List(#(String, String))) {
 fn update_form(
   model: Model,
   values: List(#(String, String)),
-  update_fn: fn(Form(r4us.Patient), List(#(String, String))) -> Form(r4us.Patient),
+  update_fn: fn(Form(r4us.Patient), List(#(String, String))) ->
+    Form(r4us.Patient),
 ) {
   let updated = update_fn(current_form(model), values)
   set_form(model, updated)
@@ -89,18 +92,27 @@ fn default_form() -> Form(r4us.Patient) {
 
 fn set_form(model: Model, newpatient: Form(r4us.Patient)) {
   case model.route {
-    mm.RouteNoId(mm.RegisterPatient(_)) ->
-      #(
-        Model(..model, route: mm.RouteNoId(mm.RegisterPatient(Some(newpatient)))),
-        effect.none(),
-      )
+    mm.RouteNoId(mm.RegisterPatient(_)) -> #(
+      Model(..model, route: mm.RouteNoId(mm.RegisterPatient(Some(newpatient)))),
+      effect.none(),
+    )
     _ -> #(model, effect.none())
   }
 }
 
 pub fn created(model: Model, created_pat: r4us.Patient) {
   case created_pat.id {
-    None -> panic as "created no id?"
+    None -> {
+      let updated_form =
+        current_form(model)
+        |> form.add_error(
+          demographics.patient_form_server_error_name,
+          form.CustomError(
+            "Server error: created patient did not include an id",
+          ),
+        )
+      set_form(model, updated_form)
+    }
     Some(id) -> {
       let pat_url =
         mm.route_to_urlstring(mm.RoutePatient(
@@ -114,10 +126,14 @@ pub fn created(model: Model, created_pat: r4us.Patient) {
   }
 }
 
-pub fn create_error(model: Model, err) {
-  echo "err on server"
-  echo err
-  #(model, effect.none())
+pub fn create_error(model: Model, err: r4us_rsvp.Err) {
+  let updated_form =
+    current_form(model)
+    |> form.add_error(
+      demographics.patient_form_server_error_name,
+      form.CustomError("Server error: " <> utils.err_to_string(err)),
+    )
+  set_form(model, updated_form)
 }
 
 pub fn view(newpatient: Option(Form(r4us.Patient))) {

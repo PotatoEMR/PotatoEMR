@@ -1,14 +1,11 @@
 import fhir/r4us_rsvp
 import gleam/list
 import gleam/uri
-import lustre
-import lustre/attribute.{type Attribute} as a
-import lustre/effect.{type Effect}
-import lustre/element.{type Element}
+import lustre/attribute as a
+import lustre/effect
 import lustre/element/html as h
-import lustre/element/svg
 import lustre/event
-import model_msgs.{type Model, type Msg, Model} as mm
+import model_msgs.{type Model, Model} as mm
 
 pub fn update(msg, model) {
   case msg {

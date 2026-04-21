@@ -1,19 +1,9 @@
-import fhir/r4us
-import fhir/r4us_rsvp
-import fhir/r4us_valuesets
 import formal/form.{type Form}
 import gleam/list
-import gleam/option.{type Option, None, Some}
-import gleam/result
 import lustre/attribute as a
-import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html as h
 import lustre/event
-import model_msgs.{type Model, Model} as mm
-import terminology/substancecodes
-import utils
-import utils2
 
 pub type CodingOption {
   CodingOption(code: String, display: String, system: String)

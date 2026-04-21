@@ -23,14 +23,20 @@ import utils
 
 pub fn update(msg, model) {
   case msg {
-    mm.ServerCreatedEncounter(Ok(enc), note) -> server_created(model, enc, note)
-    mm.ServerCreatedEncounter(Error(_), _) -> #(model, effect.none())
-    mm.ServerUpdatedEncounter(Ok(enc), note) -> server_updated(model, enc, note)
-    mm.ServerUpdatedEncounter(Error(_), _) -> #(model, effect.none())
+    mm.ServerCreatedEncounter(Ok(enc), note, _) ->
+      server_created(model, enc, note)
+    mm.ServerCreatedEncounter(Error(err), _, submitted_form) ->
+      server_error(model, submitted_form, err)
+    mm.ServerUpdatedEncounter(Ok(enc), note, _) ->
+      server_updated(model, enc, note)
+    mm.ServerUpdatedEncounter(Error(err), _, submitted_form) ->
+      server_error(model, submitted_form, err)
     mm.ServerSavedEncounterNote(Ok(doc)) -> server_saved_note(model, doc)
     mm.ServerSavedEncounterNote(Error(_)) -> #(model, effect.none())
-    mm.ServerDeletedEncounterNote(_) -> #(model, effect.none())
-    mm.ServerDeletedEncounter(_) -> #(model, effect.none())
+    mm.ServerDeletedEncounterNote(Ok(_)) -> #(model, effect.none())
+    mm.ServerDeletedEncounterNote(Error(_)) -> #(model, effect.none())
+    mm.ServerDeletedEncounter(Ok(_)) -> #(model, effect.none())
+    mm.ServerDeletedEncounter(Error(_)) -> #(model, effect.none())
     mm.UserClickedCreateEncounter -> edit(model, None)
     mm.UserClickedEditEncounter(id) -> edit(model, Some(id))
     mm.UserClickedDeleteEncounter(id) -> delete(model, id)
@@ -47,7 +53,7 @@ pub fn server_created(
 ) -> #(Model, Effect(mm.SubmsgEncounter)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> {
+    mm.RoutePatient(id:, page: _, patient:) -> {
       let note_effect = case patient {
         mm.PatientLoadFound(data) ->
           save_note_effect(model.client, data.patient, enc, note)
@@ -75,7 +81,7 @@ pub fn server_updated(
 ) -> #(Model, Effect(mm.SubmsgEncounter)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> {
+    mm.RoutePatient(id:, page: _, patient:) -> {
       let note_effect = case patient {
         mm.PatientLoadFound(data) ->
           save_note_effect(model.client, data.patient, updated, note)
@@ -101,11 +107,13 @@ pub fn server_updated(
               }
             _, _ -> data.patient_documentreferences
           }
-          mm.PatientLoadFound(mm.PatientData(
-            ..data,
-            patient_documentreferences:,
-            patient_encounters:,
-          ))
+          mm.PatientLoadFound(
+            mm.PatientData(
+              ..data,
+              patient_documentreferences:,
+              patient_encounters:,
+            ),
+          )
         }
         _ -> patient
       }
@@ -123,17 +131,20 @@ pub fn server_saved_note(
 ) -> #(Model, Effect(mm.SubmsgEncounter)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> {
+    mm.RoutePatient(id:, page: _, patient:) -> {
       let new_pat = case patient {
         mm.PatientLoadFound(data:) -> {
           let patient_documentreferences =
             upsert_documentreference(data.patient_documentreferences, saved)
-          mm.PatientLoadFound(mm.PatientData(..data, patient_documentreferences:))
+          mm.PatientLoadFound(
+            mm.PatientData(..data, patient_documentreferences:),
+          )
         }
         _ -> patient
       }
       #(
-        model |> set_form_state(id:, patient: new_pat, formstate: mm.FormStateNone),
+        model
+          |> set_form_state(id:, patient: new_pat, formstate: mm.FormStateNone),
         effect.none(),
       )
     }
@@ -143,7 +154,7 @@ pub fn server_saved_note(
 pub fn edit(model: Model, edit_id: Option(String)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id: pat_id, patient:, page:) ->
+    mm.RoutePatient(id: pat_id, patient:, page: _) ->
       case patient {
         mm.PatientLoadFound(data) ->
           case edit_id {
@@ -154,7 +165,8 @@ pub fn edit(model: Model, edit_id: Option(String)) {
               {
                 Error(_) -> #(model, effect.none())
                 Ok(enc) -> {
-                  let note = encounter_note(data.patient_documentreferences, enc)
+                  let note =
+                    encounter_note(data.patient_documentreferences, enc)
                   encounter_schema(mm.EncounterNote(encounter: enc, note:))
                   |> form.new
                   |> form.add_string("class", option.unwrap(enc.class.code, ""))
@@ -207,8 +219,29 @@ pub fn form_to_model(encounter_form, model, pat_id, patient) {
     |> mm.FormStateSome
     |> mm.PatientEncounters
   let route = mm.RoutePatient(id: pat_id, patient:, page: encounter_form)
-  let model = Model(..model, route:)
-  #(model, effect.none())
+  #(Model(..model, route:), effect.none())
+}
+
+pub fn server_error(
+  model: Model,
+  submitted_form: Form(mm.EncounterNote),
+  err: r4us_rsvp.Err,
+) -> #(Model, Effect(a)) {
+  case model.route {
+    mm.RouteNoId(_) -> #(model, effect.none())
+    mm.RoutePatient(id:, page: _, patient:) -> {
+      let encounter_form =
+        submitted_form
+        |> form.add_error(
+          "class",
+          form.CustomError("Server error: " <> utils.err_to_string(err)),
+        )
+        |> mm.FormStateSome
+        |> mm.PatientEncounters
+      let route = mm.RoutePatient(id:, patient:, page: encounter_form)
+      #(Model(..model, route:), effect.none())
+    }
+  }
 }
 
 pub fn submit(model: Model, form_encounter_note: mm.EncounterNote) {
@@ -217,6 +250,10 @@ pub fn submit(model: Model, form_encounter_note: mm.EncounterNote) {
     mm.RoutePatient(id:, patient:, page:) ->
       case patient {
         mm.PatientLoadFound(data) -> {
+          let submitted_form = case page {
+            mm.PatientEncounters(mm.FormStateSome(f)) -> f
+            _ -> form.new(encounter_schema(form_encounter_note))
+          }
           let mm.EncounterNote(encounter: form_enc, note:) = form_encounter_note
           let enc_with_subject =
             r4us.Encounter(
@@ -228,13 +265,17 @@ pub fn submit(model: Model, form_encounter_note: mm.EncounterNote) {
               r4us_rsvp.encounter_create(
                 enc_with_subject,
                 model.client,
-                fn(result) { mm.ServerCreatedEncounter(result, note) },
+                fn(result) {
+                  mm.ServerCreatedEncounter(result, note, submitted_form)
+                },
               )
             Some(_) ->
               r4us_rsvp.encounter_update(
                 enc_with_subject,
                 model.client,
-                fn(result) { mm.ServerUpdatedEncounter(result, note) },
+                fn(result) {
+                  mm.ServerUpdatedEncounter(result, note, submitted_form)
+                },
               )
               |> result.unwrap(effect.none())
           }
@@ -251,13 +292,13 @@ pub fn submit(model: Model, form_encounter_note: mm.EncounterNote) {
 pub fn set_form_state(model model, id id, patient patient, formstate formstate) {
   let encounter_form = mm.PatientEncounters(formstate)
   let route = mm.RoutePatient(id:, patient:, page: encounter_form)
-  let model = Model(..model, route:)
+  Model(..model, route:)
 }
 
 pub fn delete(model: Model, enc_id: String) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, patient:, page:) ->
+    mm.RoutePatient(id:, patient:, page: _) ->
       case patient {
         mm.PatientLoadFound(data) ->
           case
@@ -269,11 +310,11 @@ pub fn delete(model: Model, enc_id: String) {
               let eff =
                 [
                   r4us_rsvp.encounter_delete(
-                  enc,
-                  model.client,
-                  mm.ServerDeletedEncounter,
+                    enc,
+                    model.client,
+                    mm.ServerDeletedEncounter,
                   )
-                  |> result.unwrap(effect.none()),
+                    |> result.unwrap(effect.none()),
                   case encounter_note(data.patient_documentreferences, enc) {
                     Some(doc) ->
                       r4us_rsvp.documentreference_delete(
@@ -319,7 +360,7 @@ pub fn delete(model: Model, enc_id: String) {
 pub fn close_form(model: Model) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, patient:, page:) -> #(
+    mm.RoutePatient(id:, patient:, page: _) -> #(
       model |> set_form_state(id:, patient:, formstate: mm.FormStateNone),
       effect.none(),
     )
@@ -329,7 +370,7 @@ pub fn close_form(model: Model) {
 pub fn form_errors(model: Model, err: Form(mm.EncounterNote)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> #(
+    mm.RoutePatient(id:, page: _, patient:) -> #(
       Model(
         ..model,
         route: mm.RoutePatient(
@@ -401,12 +442,10 @@ pub fn encounter_schema(encounter_note: mm.EncounterNote) {
     None, None -> None
     _, _ -> Some(r4us.Period(..r4us.period_new(), start:, end:))
   }
-  form.success(
-    mm.EncounterNote(
-      encounter: r4us.Encounter(..enc, class:, status:, period:),
-      note: note_from_text(existing_note, note_text),
-    ),
-  )
+  form.success(mm.EncounterNote(
+    encounter: r4us.Encounter(..enc, class:, status:, period:),
+    note: note_from_text(existing_note, note_text),
+  ))
 }
 
 fn encounter_reference(enc_id: String) {
@@ -449,7 +488,8 @@ fn note_from_text(
 ) -> Option(r4us.Documentreference) {
   case existing_note, string.trim(text) {
     None, "" -> None
-    Some(doc), "" -> Some(r4us.Documentreference(..doc, content: note_content("")))
+    Some(doc), "" ->
+      Some(r4us.Documentreference(..doc, content: note_content("")))
     _, text -> {
       let doc = case existing_note {
         Some(doc) -> doc
@@ -459,12 +499,14 @@ fn note_from_text(
             status: r4us_valuesets.DocumentreferencestatusCurrent,
           )
       }
-      Some(r4us.Documentreference(
-        ..doc,
-        content: note_content(text),
-        description: Some("Encounter note"),
-        status: r4us_valuesets.DocumentreferencestatusCurrent,
-      ))
+      Some(
+        r4us.Documentreference(
+          ..doc,
+          content: note_content(text),
+          description: Some("Encounter note"),
+          status: r4us_valuesets.DocumentreferencestatusCurrent,
+        ),
+      )
     }
   }
 }
@@ -517,10 +559,12 @@ fn save_note_effect(
             r4us.Documentreference(
               ..doc,
               subject: Some(patient |> utils.patient_to_reference),
-              context: Some(r4us.DocumentreferenceContext(
-                ..r4us.documentreference_context_new(),
-                encounter: [reference_to_encounter(enc_id)],
-              )),
+              context: Some(
+                r4us.DocumentreferenceContext(
+                  ..r4us.documentreference_context_new(),
+                  encounter: [reference_to_encounter(enc_id)],
+                ),
+              ),
             )
           case doc.id {
             Some(_) ->
@@ -576,15 +620,9 @@ fn class_display(code: String) -> String {
   |> result.unwrap(code)
 }
 
-pub fn view(
-  pat: mm.PatientData,
-  encounter_form: mm.FormState(mm.EncounterNote),
-) {
+pub fn view(pat: mm.PatientData, encounter_form: mm.FormState(mm.EncounterNote)) {
   let head =
-    h.tr(
-      [],
-      utils.th_list(["class", "status", "start", "end", "note", ""]),
-    )
+    h.tr([], utils.th_list(["class", "status", "start", "end", "note", ""]))
   let rows =
     list.map(pat.patient_encounters, fn(enc) {
       case enc.id {
@@ -618,7 +656,9 @@ pub fn view(
               },
             ]),
             h.td([a.class("p-2 max-w-xs truncate")], [
-              h.text(note_text(encounter_note(pat.patient_documentreferences, enc))),
+              h.text(
+                note_text(encounter_note(pat.patient_documentreferences, enc)),
+              ),
             ]),
             h.td([a.class("p-2 flex gap-2")], [
               btn("Edit", on_click: mm.UserClickedEditEncounter(enc_id)),

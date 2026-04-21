@@ -30,11 +30,14 @@ const frequency_options: List(String) = [
 
 pub fn update(msg, model) {
   case msg {
-    mm.ServerCreatedOrder(Ok(mr)) -> server_created(model, mr)
-    mm.ServerCreatedOrder(Error(_)) -> #(model, effect.none())
-    mm.ServerUpdatedOrder(Ok(mr)) -> server_updated(model, mr)
-    mm.ServerUpdatedOrder(Error(_)) -> #(model, effect.none())
-    mm.ServerDeletedOrder(_) -> #(model, effect.none())
+    mm.ServerCreatedOrder(Ok(mr), _) -> server_created(model, mr)
+    mm.ServerCreatedOrder(Error(err), submitted_form) ->
+      server_error(model, submitted_form, err)
+    mm.ServerUpdatedOrder(Ok(mr), _) -> server_updated(model, mr)
+    mm.ServerUpdatedOrder(Error(err), submitted_form) ->
+      server_error(model, submitted_form, err)
+    mm.ServerDeletedOrder(Ok(_)) -> #(model, effect.none())
+    mm.ServerDeletedOrder(Error(_)) -> #(model, effect.none())
     mm.UserClickedCreateOrder -> edit(model, None)
     mm.UserClickedEditOrder(id) -> edit(model, Some(id))
     mm.UserClickedDeleteOrder(id) -> delete(model, id)
@@ -50,7 +53,7 @@ pub fn server_created(
 ) -> #(Model, Effect(a)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> {
+    mm.RoutePatient(id:, page: _, patient:) -> {
       let new_pat = case patient {
         mm.PatientLoadFound(data:) -> {
           let patient_medication_requests =
@@ -75,7 +78,7 @@ pub fn server_updated(
 ) -> #(Model, Effect(a)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> {
+    mm.RoutePatient(id:, page: _, patient:) -> {
       let new_pat = case patient {
         mm.PatientLoadFound(data:) -> {
           let patient_medication_requests =
@@ -103,7 +106,7 @@ pub fn server_updated(
 pub fn edit(model: Model, edit_id: Option(String)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id: pat_id, patient:, page:) ->
+    mm.RoutePatient(id: pat_id, patient:, page: _) ->
       case patient {
         mm.PatientLoadFound(data) ->
           case edit_id {
@@ -175,8 +178,29 @@ pub fn form_to_model(order_form, model, pat_id, patient) {
     |> mm.FormStateSome
     |> mm.PatientOrders
   let route = mm.RoutePatient(id: pat_id, patient:, page: order_form)
-  let model = Model(..model, route:)
-  #(model, effect.none())
+  #(Model(..model, route:), effect.none())
+}
+
+pub fn server_error(
+  model: Model,
+  submitted_form: Form(r4us.Medicationrequest),
+  err: r4us_rsvp.Err,
+) -> #(Model, Effect(a)) {
+  case model.route {
+    mm.RouteNoId(_) -> #(model, effect.none())
+    mm.RoutePatient(id:, page: _, patient:) -> {
+      let order_form =
+        submitted_form
+        |> form.add_error(
+          "code",
+          form.CustomError("Server error: " <> utils.err_to_string(err)),
+        )
+        |> mm.FormStateSome
+        |> mm.PatientOrders
+      let route = mm.RoutePatient(id:, patient:, page: order_form)
+      #(Model(..model, route:), effect.none())
+    }
+  }
 }
 
 pub fn submit(model: Model, form_mr: r4us.Medicationrequest) {
@@ -185,6 +209,10 @@ pub fn submit(model: Model, form_mr: r4us.Medicationrequest) {
     mm.RoutePatient(id:, patient:, page:) ->
       case patient {
         mm.PatientLoadFound(data) -> {
+          let submitted_form = case page {
+            mm.PatientOrders(mm.FormStateSome(f)) -> f
+            _ -> form.new(medreq_schema(form_mr))
+          }
           let mr_with_subject =
             r4us.Medicationrequest(
               ..form_mr,
@@ -195,13 +223,13 @@ pub fn submit(model: Model, form_mr: r4us.Medicationrequest) {
               r4us_rsvp.medicationrequest_create(
                 mr_with_subject,
                 model.client,
-                mm.ServerCreatedOrder,
+                fn(result) { mm.ServerCreatedOrder(result, submitted_form) },
               )
             Some(_) ->
               r4us_rsvp.medicationrequest_update(
                 mr_with_subject,
                 model.client,
-                mm.ServerUpdatedOrder,
+                fn(result) { mm.ServerUpdatedOrder(result, submitted_form) },
               )
               |> result.unwrap(effect.none())
           }
@@ -218,13 +246,13 @@ pub fn submit(model: Model, form_mr: r4us.Medicationrequest) {
 pub fn set_form_state(model model, id id, patient patient, formstate formstate) {
   let order_form = mm.PatientOrders(formstate)
   let route = mm.RoutePatient(id:, patient:, page: order_form)
-  let model = Model(..model, route:)
+  Model(..model, route:)
 }
 
 pub fn delete(model: Model, mr_id: String) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, patient:, page:) ->
+    mm.RoutePatient(id:, patient:, page: _) ->
       case patient {
         mm.PatientLoadFound(data) ->
           case
@@ -266,7 +294,7 @@ pub fn delete(model: Model, mr_id: String) {
 pub fn close_form(model: Model) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, patient:, page:) -> #(
+    mm.RoutePatient(id:, patient:, page: _) -> #(
       model |> set_form_state(id:, patient:, formstate: mm.FormStateNone),
       effect.none(),
     )
@@ -276,7 +304,7 @@ pub fn close_form(model: Model) {
 pub fn form_errors(model: Model, err: Form(r4us.Medicationrequest)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> #(
+    mm.RoutePatient(id:, page: _, patient:) -> #(
       Model(
         ..model,
         route: mm.RoutePatient(

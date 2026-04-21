@@ -3,13 +3,11 @@ import fhir/r4us_rsvp
 import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/list
-import gleam/option.{Some}
+import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
-import lustre
-import lustre/attribute.{type Attribute} as a
+import lustre/attribute as a
 import lustre/effect
-import lustre/element
 import lustre/element/html as h
 import lustre/event
 import model_msgs.{type Model, Model} as mm
@@ -18,7 +16,7 @@ import utils2
 
 pub fn update(msg, model) {
   case msg {
-    mm.ServerUpdatedPatientPhoto(Error(_)) -> todo
+    mm.ServerUpdatedPatientPhoto(Error(err)) -> photo_error(model, err)
     mm.ServerUpdatedPatientPhoto(Ok(patient)) -> server_updated(model, patient)
     mm.UserDraggingPhoto(dragging_photo) ->
       set_drag_photo(model, dragging_photo)
@@ -93,7 +91,7 @@ fn server_updated(model: Model, patient: r4us.Patient) {
 
 pub fn set_drag_photo(model: Model, dragging_photo: Bool) {
   case model.route {
-    mm.RoutePatient(page: mm.PatientPhotos, ..) -> #(
+    mm.RoutePatient(page: mm.PatientPhotos(_), ..) -> #(
       Model(..model, dragging_photo:),
       effect.none(),
     )
@@ -107,7 +105,7 @@ pub fn set_existing(model: Model, num: Int) {
       case patient {
         mm.PatientLoadFound(data:) -> {
           case data.patient.photo {
-            [] -> todo
+            [] -> #(model, effect.none())
             [first, ..] -> {
               // indicating use this picture by moving to front of list
               // is not that short but not terrible
@@ -148,7 +146,24 @@ pub fn set_existing(model: Model, num: Int) {
   }
 }
 
+fn photo_error(model: Model, err: r4us_rsvp.Err) {
+  case model.route {
+    mm.RoutePatient(id:, patient:, page: mm.PatientPhotos(_)) -> #(
+      Model(
+        ..model,
+        route: mm.RoutePatient(id:, patient:, page: mm.PatientPhotos(Some(err))),
+      ),
+      effect.none(),
+    )
+    _ -> #(model, effect.none())
+  }
+}
+
 pub fn view(model: Model, data: mm.PatientData) {
+  let page_error = case model.route {
+    mm.RoutePatient(page: mm.PatientPhotos(error), ..) -> error
+    _ -> None
+  }
   let photos =
     list.index_map(data.patient.photo, fn(photo, num) {
       case utils.get_img_src(photo) {
@@ -169,6 +184,18 @@ pub fn view(model: Model, data: mm.PatientData) {
   [
     h.div([a.class("min-h-full")], [
       h.div([a.class("p-4")], [
+        case page_error {
+          Some(err) ->
+            h.div(
+              [
+                a.class(
+                  "mb-4 rounded border border-red-700 bg-red-950 px-3 py-2 text-sm text-red-100",
+                ),
+              ],
+              [h.text("Server error: " <> utils.err_to_string(err))],
+            )
+          None -> h.div([a.class("hidden")], [])
+        },
         h.div([a.class(dropzone_class)], [
           h.h3([a.class("text-lg mb-2")], [h.text("Upload Photo")]),
           h.label(

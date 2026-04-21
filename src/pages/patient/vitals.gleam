@@ -239,9 +239,10 @@ pub fn update(msg, model: Model) {
     mm.UserSubmittedVitalsForm(Ok(observations)) -> submit(model, observations)
     mm.UserSubmittedVitalsForm(Error(err)) ->
       set_form_state(model, mm.FormStateSome(err))
-    mm.ServerReturnedVitalsBundle(Ok(bundle)) -> bundle_returned(model, bundle)
-    mm.ServerReturnedVitalsBundle(Error(_)) ->
-      set_form_state(model, mm.FormStateNone)
+    mm.ServerReturnedVitalsBundle(Ok(bundle), _) ->
+      bundle_returned(model, bundle)
+    mm.ServerReturnedVitalsBundle(Error(err), submitted_form) ->
+      server_error(model, submitted_form, err)
     mm.ServerReturnedVitalsDelete(time_key, Ok(_)) ->
       delete_column_done(model, time_key)
     mm.ServerReturnedVitalsDelete(_, Error(_)) ->
@@ -410,6 +411,10 @@ fn submit(model: Model, observations: List(r4us.Observation)) {
   case observations {
     [] -> set_form_state(model, mm.FormStateNone)
     _ -> {
+      let submitted_form = case model.route {
+        mm.RoutePatient(page: mm.PatientVitals(mm.FormStateSome(f)), ..) -> f
+        _ -> form.new(vitals_schema(r4us.reference_new(), []))
+      }
       let reqs =
         list.filter_map(observations, fn(obs) {
           case obs.id {
@@ -418,16 +423,27 @@ fn submit(model: Model, observations: List(r4us.Observation)) {
           }
         })
       let eff =
-        r4us_rsvp.batch(
-          reqs,
-          r4us_sansio.Transaction,
-          model.client,
-          mm.ServerReturnedVitalsBundle,
-        )
+        r4us_rsvp.batch(reqs, r4us_sansio.Transaction, model.client, fn(result) {
+          mm.ServerReturnedVitalsBundle(result, submitted_form)
+        })
       let #(model, _) = set_form_state(model, mm.FormStateLoading)
       #(model, eff)
     }
   }
+}
+
+fn server_error(
+  model: Model,
+  submitted_form: Form(List(r4us.Observation)),
+  err: r4us_rsvp.Err,
+) {
+  let f =
+    submitted_form
+    |> form.add_error(
+      "effective_datetime",
+      form.CustomError("Server error: " <> utils.err_to_string(err)),
+    )
+  set_form_state(model, mm.FormStateSome(f))
 }
 
 fn bundle_returned(model: Model, bundle: r4us.Bundle) {

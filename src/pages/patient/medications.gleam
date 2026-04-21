@@ -21,11 +21,14 @@ import utils
 
 pub fn update(msg, model) {
   case msg {
-    mm.ServerCreatedMedication(Ok(ms)) -> server_created(model, ms)
-    mm.ServerCreatedMedication(Error(_)) -> #(model, effect.none())
-    mm.ServerUpdatedMedication(Ok(ms)) -> server_updated(model, ms)
-    mm.ServerUpdatedMedication(Error(_)) -> #(model, effect.none())
-    mm.ServerDeletedMedication(_) -> #(model, effect.none())
+    mm.ServerCreatedMedication(Ok(ms), _) -> server_created(model, ms)
+    mm.ServerCreatedMedication(Error(err), submitted_form) ->
+      server_error(model, submitted_form, err)
+    mm.ServerUpdatedMedication(Ok(ms), _) -> server_updated(model, ms)
+    mm.ServerUpdatedMedication(Error(err), submitted_form) ->
+      server_error(model, submitted_form, err)
+    mm.ServerDeletedMedication(Ok(_)) -> #(model, effect.none())
+    mm.ServerDeletedMedication(Error(_)) -> #(model, effect.none())
     mm.UserClickedCreateMedication -> edit(model, None)
     mm.UserClickedEditMedication(id) -> edit(model, Some(id))
     mm.UserClickedDeleteMedication(id) -> delete(model, id)
@@ -41,7 +44,7 @@ pub fn server_created(
 ) -> #(Model, Effect(a)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> {
+    mm.RoutePatient(id:, page: _, patient:) -> {
       let new_pat = case patient {
         mm.PatientLoadFound(data:) -> {
           let patient_medication_statements =
@@ -66,7 +69,7 @@ pub fn server_updated(
 ) -> #(Model, Effect(a)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> {
+    mm.RoutePatient(id:, page: _, patient:) -> {
       let new_pat = case patient {
         mm.PatientLoadFound(data:) -> {
           let patient_medication_statements =
@@ -94,7 +97,7 @@ pub fn server_updated(
 pub fn edit(model: Model, edit_id: Option(String)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id: pat_id, patient:, page:) ->
+    mm.RoutePatient(id: pat_id, patient:, page: _) ->
       case patient {
         mm.PatientLoadFound(data) ->
           case edit_id {
@@ -117,14 +120,19 @@ pub fn edit(model: Model, edit_id: Option(String)) {
                   })
                   |> form.add_string(
                     "status",
-                    r4us_valuesets.medicationstatementstatus_to_string(ms.status),
+                    r4us_valuesets.medicationstatementstatus_to_string(
+                      ms.status,
+                    ),
                   )
                   |> form.add_string("effective", case ms.effective {
                     Some(r4us.MedicationstatementEffectiveDatetime(dt)) ->
                       dt |> primitive_types.datetime_to_string
                     _ -> ""
                   })
-                  |> form.add_string("note", utils.annotation_first_text(ms.note))
+                  |> form.add_string(
+                    "note",
+                    utils.annotation_first_text(ms.note),
+                  )
                   |> form.add_string("id", edit_id)
                   |> form_to_model(model, pat_id, patient)
               }
@@ -153,8 +161,29 @@ pub fn form_to_model(medication_form, model, pat_id, patient) {
     |> mm.FormStateSome
     |> mm.PatientMedications
   let route = mm.RoutePatient(id: pat_id, patient:, page: medication_form)
-  let model = Model(..model, route:)
-  #(model, effect.none())
+  #(Model(..model, route:), effect.none())
+}
+
+pub fn server_error(
+  model: Model,
+  submitted_form: Form(r4us.Medicationstatement),
+  err: r4us_rsvp.Err,
+) -> #(Model, Effect(a)) {
+  case model.route {
+    mm.RouteNoId(_) -> #(model, effect.none())
+    mm.RoutePatient(id:, page: _, patient:) -> {
+      let medication_form =
+        submitted_form
+        |> form.add_error(
+          "code",
+          form.CustomError("Server error: " <> utils.err_to_string(err)),
+        )
+        |> mm.FormStateSome
+        |> mm.PatientMedications
+      let route = mm.RoutePatient(id:, patient:, page: medication_form)
+      #(Model(..model, route:), effect.none())
+    }
+  }
 }
 
 pub fn submit(model: Model, form_ms: r4us.Medicationstatement) {
@@ -163,6 +192,10 @@ pub fn submit(model: Model, form_ms: r4us.Medicationstatement) {
     mm.RoutePatient(id:, patient:, page:) ->
       case patient {
         mm.PatientLoadFound(data) -> {
+          let submitted_form = case page {
+            mm.PatientMedications(mm.FormStateSome(f)) -> f
+            _ -> form.new(medstmt_schema(form_ms))
+          }
           let ms_with_subject =
             r4us.Medicationstatement(
               ..form_ms,
@@ -173,13 +206,17 @@ pub fn submit(model: Model, form_ms: r4us.Medicationstatement) {
               r4us_rsvp.medicationstatement_create(
                 ms_with_subject,
                 model.client,
-                mm.ServerCreatedMedication,
+                fn(result) {
+                  mm.ServerCreatedMedication(result, submitted_form)
+                },
               )
             Some(_) ->
               r4us_rsvp.medicationstatement_update(
                 ms_with_subject,
                 model.client,
-                mm.ServerUpdatedMedication,
+                fn(result) {
+                  mm.ServerUpdatedMedication(result, submitted_form)
+                },
               )
               |> result.unwrap(effect.none())
           }
@@ -196,13 +233,13 @@ pub fn submit(model: Model, form_ms: r4us.Medicationstatement) {
 pub fn set_form_state(model model, id id, patient patient, formstate formstate) {
   let medication_form = mm.PatientMedications(formstate)
   let route = mm.RoutePatient(id:, patient:, page: medication_form)
-  let model = Model(..model, route:)
+  Model(..model, route:)
 }
 
 pub fn delete(model: Model, ms_id: String) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, patient:, page:) ->
+    mm.RoutePatient(id:, patient:, page: _) ->
       case patient {
         mm.PatientLoadFound(data) ->
           case
@@ -244,7 +281,7 @@ pub fn delete(model: Model, ms_id: String) {
 pub fn close_form(model: Model) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, patient:, page:) -> #(
+    mm.RoutePatient(id:, patient:, page: _) -> #(
       model |> set_form_state(id:, patient:, formstate: mm.FormStateNone),
       effect.none(),
     )
@@ -254,7 +291,7 @@ pub fn close_form(model: Model) {
 pub fn form_errors(model: Model, err: Form(r4us.Medicationstatement)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> #(
+    mm.RoutePatient(id:, page: _, patient:) -> #(
       Model(
         ..model,
         route: mm.RoutePatient(
@@ -278,8 +315,8 @@ pub fn medstmt_schema(ms: r4us.Medicationstatement) {
       }
       case list.find(medicationcodes.medication_codes, fn(e) { e.0 == str }) {
         Ok(#(code_val, display)) ->
-          Ok(
-            r4us.MedicationstatementMedicationCodeableconcept(r4us.Codeableconcept(
+          Ok(r4us.MedicationstatementMedicationCodeableconcept(
+            r4us.Codeableconcept(
               ..r4us.codeableconcept_new(),
               text: Some(display),
               coding: [
@@ -289,8 +326,8 @@ pub fn medstmt_schema(ms: r4us.Medicationstatement) {
                   display:,
                 ),
               ],
-            )),
-          )
+            ),
+          ))
         Error(_) -> Error(#(ms.medication, "Must choose a medication"))
       }
     }),
@@ -335,10 +372,7 @@ pub fn view(
   medication_form: mm.FormState(r4us.Medicationstatement),
 ) {
   let head =
-    h.tr(
-      [],
-      utils.th_list(["medication", "status", "effective", "notes", ""]),
-    )
+    h.tr([], utils.th_list(["medication", "status", "effective", "notes", ""]))
   let rows =
     list.map(pat.patient_medication_statements, fn(ms) {
       case ms.id {
@@ -448,7 +482,9 @@ pub fn view(
                       r4us_valuesets.MedicationstatementstatusOnhold,
                       r4us_valuesets.MedicationstatementstatusNottaken,
                     ]
-                      |> list.map(r4us_valuesets.medicationstatementstatus_to_string),
+                      |> list.map(
+                        r4us_valuesets.medicationstatementstatus_to_string,
+                      ),
                     label: "status",
                   ),
                   view_form_input(

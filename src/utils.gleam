@@ -15,7 +15,6 @@ import gleam/time/timestamp
 import lustre/attribute as a
 import lustre/element
 import lustre/element/html as h
-import rsvp
 
 pub fn err_to_string(err: r4us_rsvp.Err) {
   case err {
@@ -24,7 +23,7 @@ pub fn err_to_string(err: r4us_rsvp.Err) {
   }
 }
 
-pub fn rsvp_err_to_string(err: rsvp.Error) -> String {
+pub fn rsvp_err_to_string(_err) -> String {
   "http request error"
 }
 

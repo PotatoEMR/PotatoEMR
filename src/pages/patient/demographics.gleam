@@ -23,8 +23,10 @@ import utils
 
 pub fn update(msg, model) {
   case msg {
-    mm.ServerUpdatedPatientDemographics(Ok(pat)) -> server_updated(model, pat)
-    mm.ServerUpdatedPatientDemographics(Error(_)) -> panic as "demographics err"
+    mm.ServerUpdatedPatientDemographics(Ok(pat), _) ->
+      server_updated(model, pat)
+    mm.ServerUpdatedPatientDemographics(Error(err), submitted_form) ->
+      server_error(model, submitted_form, err)
     mm.UserClickedEditDemographics -> edit(model)
     mm.UserClickedCloseDemographicsForm -> close_form(model)
     mm.UserClickedAddDemographicsName(values) -> add_name(model, values)
@@ -187,18 +189,42 @@ pub fn form_to_model(demo_form, model, pat_id, patient) {
   #(model, effect.none())
 }
 
+pub fn server_error(
+  model: Model,
+  submitted_form: Form(r4us.Patient),
+  err: r4us_rsvp.Err,
+) -> #(Model, Effect(a)) {
+  case model.route {
+    mm.RouteNoId(_) -> #(model, effect.none())
+    mm.RoutePatient(id:, page: _, patient:) -> {
+      let demo_form =
+        submitted_form
+        |> form.add_error(
+          patient_form_server_error_name,
+          form.CustomError("Server error: " <> utils.err_to_string(err)),
+        )
+        |> mm.FormStateSome
+        |> mm.PatientDemographics
+      let route = mm.RoutePatient(id:, patient:, page: demo_form)
+      #(Model(..model, route:), effect.none())
+    }
+  }
+}
+
 pub fn submit(model: Model, form_patient: r4us.Patient) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, patient:, page: _) ->
+    mm.RoutePatient(id:, patient:, page:) ->
       case patient {
         mm.PatientLoadFound(_) -> {
+          let submitted_form = case page {
+            mm.PatientDemographics(mm.FormStateSome(f)) -> f
+            _ -> form.new(patient_schema(form_patient))
+          }
           let effect =
-            r4us_rsvp.patient_update(
-              form_patient,
-              model.client,
-              mm.ServerUpdatedPatientDemographics,
-            )
+            r4us_rsvp.patient_update(form_patient, model.client, fn(result) {
+              mm.ServerUpdatedPatientDemographics(result, submitted_form)
+            })
             |> result.unwrap(effect.none())
           let model =
             model
@@ -816,8 +842,10 @@ const name_count_name = "name_count"
 
 const recorded_gender_count_name = "recorded_gender_count"
 
+pub const patient_form_server_error_name = "server_error"
+
 fn add_name_fields(demo_form, names: List(r4us.Humanname)) {
-  let initial_count = case list.length(names) == 0 {
+  let initial_count = case names == [] {
     True -> 1
     False -> list.length(names)
   }
@@ -1881,7 +1909,10 @@ fn info_row(label: String, value: String) {
   ])
 }
 
-fn name_form_fieldset(name_sections: List(element.Element(msg)), add_name_button) {
+fn name_form_fieldset(
+  name_sections: List(element.Element(msg)),
+  add_name_button,
+) {
   h.fieldset(
     [
       a.class(
@@ -1899,7 +1930,10 @@ fn name_form_fieldset(name_sections: List(element.Element(msg)), add_name_button
   )
 }
 
-fn identifier_form_fieldset(identifier_sections: List(element.Element(msg)), add_identifier_button) {
+fn identifier_form_fieldset(
+  identifier_sections: List(element.Element(msg)),
+  add_identifier_button,
+) {
   h.fieldset(
     [
       a.class(
@@ -1931,7 +1965,7 @@ pub fn view_patient_form(
   on_delete_identifier: fn(List(#(String, String))) -> msg,
   cancel_button: Option(#(String, msg)),
 ) {
-  let initial_name_count = case list.length(pat.name) == 0 {
+  let initial_name_count = case pat.name == [] {
     True -> 1
     False -> list.length(pat.name)
   }
@@ -1974,6 +2008,8 @@ pub fn view_patient_form(
     list.index_map(identifier_slots, fn(_, i) {
       identifier_form_section(demo_form, i)
     })
+  let server_errors =
+    form.field_error_messages(demo_form, patient_form_server_error_name)
   let add_identifier_button = case identifier_count >= max_identifier_slots {
     True -> element.none()
     False ->
@@ -2006,13 +2042,11 @@ pub fn view_patient_form(
                                 |> form.add_values(values)
                                 |> form.run
                                 |> on_submit
-                              _ ->
-                                on_delete_identifier(values)
+                              _ -> on_delete_identifier(values)
                             }
                           _ -> on_add_identifier(values)
                         }
-                      _ ->
-                        on_delete_recorded_gender(values)
+                      _ -> on_delete_recorded_gender(values)
                     }
                   _ -> on_add_recorded_gender(values)
                 }
@@ -2049,6 +2083,18 @@ pub fn view_patient_form(
               a.name(recorded_gender_count_name),
               a.value(int.to_string(recorded_gender_count)),
             ]),
+            case server_errors {
+              [] -> element.none()
+              errors ->
+                h.div(
+                  [
+                    a.class(
+                      "w-full rounded border border-red-700 bg-red-950 px-3 py-2 text-sm text-red-100",
+                    ),
+                  ],
+                  list.map(errors, h.text),
+                )
+            },
             name_form_fieldset(name_sections, add_name_button),
             view_form_select(
               demo_form,

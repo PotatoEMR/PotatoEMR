@@ -1,6 +1,6 @@
 import gleam/dynamic
 import lustre/effect.{type Effect}
-import model_msgs.{type Model, type Msg, type Route, Model, href} as mm
+import model_msgs.{type Model, Model} as mm
 
 pub fn update_patient(
   model: Model,

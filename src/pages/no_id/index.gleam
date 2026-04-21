@@ -1,5 +1,3 @@
-import gleam/option.{None, Some}
-import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html as h
 

@@ -12,21 +12,23 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import lustre/attribute as a
 import lustre/effect.{type Effect}
-import lustre/element.{type Element}
+import lustre/element
 import lustre/element/html as h
 import lustre/event
 import model_msgs.{type Model, Model} as mm
 import terminology/substancecodes
 import utils
-import utils2
 
 pub fn update(msg, model) {
   case msg {
-    mm.ServerCreatedAllergy(Ok(alrgy)) -> server_created(model, alrgy)
-    mm.ServerCreatedAllergy(Error(_)) -> todo
-    mm.ServerUpdatedAllergy(Ok(alrgy)) -> server_updated(model, alrgy)
-    mm.ServerUpdatedAllergy(Error(_)) -> todo
-    mm.ServerDeletedAllergy(_) -> #(model, effect.none())
+    mm.ServerCreatedAllergy(Ok(alrgy), _) -> server_created(model, alrgy)
+    mm.ServerCreatedAllergy(Error(err), submitted_form) ->
+      server_error(model, submitted_form, err)
+    mm.ServerUpdatedAllergy(Ok(alrgy), _) -> server_updated(model, alrgy)
+    mm.ServerUpdatedAllergy(Error(err), submitted_form) ->
+      server_error(model, submitted_form, err)
+    mm.ServerDeletedAllergy(Ok(_)) -> #(model, effect.none())
+    mm.ServerDeletedAllergy(Error(_)) -> #(model, effect.none())
     mm.UserClickedCreateAllergy -> edit(model, None)
     mm.UserClickedEditAllergy(id) -> edit(model, Some(id))
     mm.UserClickedDeleteAllergy(id) -> delete(model, id)
@@ -42,7 +44,7 @@ pub fn server_created(
 ) -> #(Model, Effect(a)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> {
+    mm.RoutePatient(id:, page: _, patient:) -> {
       let new_pat = case patient {
         mm.PatientLoadFound(data:) -> {
           let patient_allergies = list.append(data.patient_allergies, [allergy])
@@ -64,7 +66,7 @@ pub fn server_updated(
 ) -> #(Model, Effect(a)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> {
+    mm.RoutePatient(id:, page: _, patient:) -> {
       let new_pat = case patient {
         mm.PatientLoadFound(data:) -> {
           let patient_allergies =
@@ -90,7 +92,7 @@ pub fn server_updated(
 pub fn edit(model: Model, edit_allergy_id: Option(String)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id: pat_id, patient:, page:) ->
+    mm.RoutePatient(id: pat_id, patient:, page: _) ->
       case patient {
         mm.PatientLoadFound(data) -> {
           // click create new allergy -> form for new allergy, edit_allergy_id None
@@ -103,45 +105,7 @@ pub fn edit(model: Model, edit_allergy_id: Option(String)) {
               {
                 Error(_) -> #(model, effect.none())
                 Ok(allergy) -> {
-                  allergy_schema(allergy)
-                  |> form.new
-                  |> form.add_string(
-                    "note",
-                    utils.annotation_first_text(allergy.note),
-                  )
-                  |> form.add_string("type_", case allergy.type_ {
-                    None -> ""
-                    Some(t) ->
-                      r4us_valuesets.allergyintolerancetype_to_string(t)
-                  })
-                  |> form.add_string("criticality", case allergy.criticality {
-                    None -> ""
-                    Some(c) ->
-                      r4us_valuesets.allergyintolerancecriticality_to_string(c)
-                  })
-                  |> form.add_string("category", case allergy.category {
-                    [] -> ""
-                    [c, ..] ->
-                      r4us_valuesets.allergyintolerancecategory_to_string(c)
-                  })
-                  |> form.add_string("code", case allergy.code {
-                    None -> ""
-                    Some(cc) ->
-                      case cc.coding {
-                        [first, ..] -> option.unwrap(first.code, "")
-                        [] -> ""
-                      }
-                  })
-                  |> form.add_string(
-                    "recorded_date",
-                    case allergy.recorded_date {
-                      None -> ""
-                      Some(primitive_types.DateTime(date:, ..)) ->
-                        date |> primitive_types.date_to_string
-                    },
-                  )
-                  // id is in form probably just so view knows if editing or creating
-                  |> form.add_string("id", edit_allergy_id)
+                  allergy_form(allergy, edit_allergy_id)
                   |> form_to_model(model, pat_id, patient)
                 }
               }
@@ -167,8 +131,62 @@ pub fn form_to_model(allergy_form, model, pat_id, patient) {
     |> mm.FormStateSome
     |> mm.PatientAllergies
   let route = mm.RoutePatient(id: pat_id, patient:, page: allergy_form)
-  let model = Model(..model, route:)
-  #(model, effect.none())
+  #(Model(..model, route:), effect.none())
+}
+
+fn allergy_form(allergy: r4us.Allergyintolerance, allergy_id: String) {
+  allergy_schema(allergy)
+  |> form.new
+  |> form.add_string("note", utils.annotation_first_text(allergy.note))
+  |> form.add_string("type_", case allergy.type_ {
+    None -> ""
+    Some(t) -> r4us_valuesets.allergyintolerancetype_to_string(t)
+  })
+  |> form.add_string("criticality", case allergy.criticality {
+    None -> ""
+    Some(c) -> r4us_valuesets.allergyintolerancecriticality_to_string(c)
+  })
+  |> form.add_string("category", case allergy.category {
+    [] -> ""
+    [c, ..] -> r4us_valuesets.allergyintolerancecategory_to_string(c)
+  })
+  |> form.add_string("code", case allergy.code {
+    None -> ""
+    Some(cc) ->
+      case cc.coding {
+        [first, ..] -> option.unwrap(first.code, "")
+        [] -> ""
+      }
+  })
+  |> form.add_string("recorded_date", case allergy.recorded_date {
+    None -> ""
+    Some(primitive_types.DateTime(date:, ..)) ->
+      date |> primitive_types.date_to_string
+  })
+  // id is in form probably just so view knows if editing or creating
+  |> form.add_string("id", allergy_id)
+}
+
+pub fn server_error(
+  model: Model,
+  submitted_form: Form(r4us.Allergyintolerance),
+  err: r4us_rsvp.Err,
+) -> #(Model, Effect(a)) {
+  case model.route {
+    mm.RouteNoId(_) -> #(model, effect.none())
+    mm.RoutePatient(id:, page: _, patient:) -> {
+      let allergy_form =
+        submitted_form
+        |> form.add_error(
+          "code",
+          form.CustomError("Server error: " <> utils.err_to_string(err)),
+        )
+        |> mm.FormStateSome
+        |> mm.PatientAllergies
+      let route = mm.RoutePatient(id:, patient:, page: allergy_form)
+      #(Model(..model, route:), effect.none())
+    }
+  }
 }
 
 pub fn submit(model: Model, form_allergy: r4us.Allergyintolerance) {
@@ -177,6 +195,10 @@ pub fn submit(model: Model, form_allergy: r4us.Allergyintolerance) {
     mm.RoutePatient(id:, patient:, page:) ->
       case patient {
         mm.PatientLoadFound(data) -> {
+          let submitted_form = case page {
+            mm.PatientAllergies(mm.FormStateSome(f)) -> f
+            _ -> form.new(allergy_schema(form_allergy))
+          }
           let allergy_with_patient =
             r4us.Allergyintolerance(
               ..form_allergy,
@@ -190,13 +212,13 @@ pub fn submit(model: Model, form_allergy: r4us.Allergyintolerance) {
               r4us_rsvp.allergyintolerance_create(
                 allergy_with_patient,
                 model.client,
-                mm.ServerCreatedAllergy,
+                fn(result) { mm.ServerCreatedAllergy(result, submitted_form) },
               )
             Some(_) ->
               r4us_rsvp.allergyintolerance_update(
                 allergy_with_patient,
                 model.client,
-                mm.ServerUpdatedAllergy,
+                fn(result) { mm.ServerUpdatedAllergy(result, submitted_form) },
               )
               |> result.unwrap(effect.none())
             // allergyintolerance_update errors if allergy to update has no id,
@@ -215,13 +237,13 @@ pub fn submit(model: Model, form_allergy: r4us.Allergyintolerance) {
 pub fn set_form_state(model model, id id, patient patient, formstate formstate) {
   let allergy_form = mm.PatientAllergies(formstate)
   let route = mm.RoutePatient(id:, patient:, page: allergy_form)
-  let model = Model(..model, route:)
+  Model(..model, route:)
 }
 
 pub fn delete(model: Model, allergy_id: String) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, patient:, page:) ->
+    mm.RoutePatient(id:, patient:, page: _) ->
       case patient {
         mm.PatientLoadFound(data) -> {
           case
@@ -262,7 +284,7 @@ pub fn delete(model: Model, allergy_id: String) {
 pub fn close_form(model: Model) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, patient:, page:) -> #(
+    mm.RoutePatient(id:, patient:, page: _) -> #(
       model |> set_form_state(id:, patient:, formstate: mm.FormStateNone),
       effect.none(),
     )
@@ -272,7 +294,7 @@ pub fn close_form(model: Model) {
 pub fn form_errors(model: Model, err: Form(r4us.Allergyintolerance)) {
   case model.route {
     mm.RouteNoId(_) -> #(model, effect.none())
-    mm.RoutePatient(id:, page:, patient:) -> #(
+    mm.RoutePatient(id:, page: _, patient:) -> #(
       Model(
         ..model,
         route: mm.RoutePatient(
@@ -534,7 +556,10 @@ pub fn view(
                     label: "category",
                   ),
                   h.div([a.class("w-full flex justify-end gap-2")], [
-                    btn_cancel("Cancel", on_click: mm.UserClickedCloseAllergyForm),
+                    btn_cancel(
+                      "Cancel",
+                      on_click: mm.UserClickedCloseAllergyForm,
+                    ),
                     btn_nomsg("Save Allergy/Intolerance"),
                   ]),
                 ],
