@@ -276,7 +276,7 @@ fn view(model: Model) -> Element(Msg) {
                   h.p([a.class("text-red-300")], [h.text(err_msg)]),
                 ]
                 mm.SearchPatientResultsLoadingMsg -> [h.text("loading...")]
-                mm.SearchPatientResultsEmptyMsg -> [h.text("empty")]
+                mm.SearchPatientResultsEmptyMsg -> [h.text("type name to search patient by name")]
                 mm.SearchPatientResultsPats(pats:) ->
                   case pats {
                     [] -> [h.p([], [h.text("no patients found")])]
