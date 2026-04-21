@@ -20,6 +20,7 @@ import pages/no_id/registerpatient
 import pages/no_id/settings
 import pages/patient/allergy
 import pages/patient/demographics
+import pages/patient/encounters
 import pages/patient/immunization
 import pages/patient/medications
 import pages/patient/orders
@@ -191,6 +192,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
           mm.PatientLoadFound(mm.PatientData(
             patient: first,
             patient_allergies: resources.allergyintolerance,
+            patient_encounters: resources.encounter,
             patient_immunizations: resources.immunization,
             patient_medications: resources.medication,
             patient_medication_requests: resources.medicationrequest,
@@ -211,6 +213,8 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       sub_update(msg, model, settings.update, mm.MsgSettings)
     mm.MsgPhoto(msg) -> sub_update(msg, model, photo.update, mm.MsgPhoto)
     mm.MsgAllergy(msg) -> sub_update(msg, model, allergy.update, mm.MsgAllergy)
+    mm.MsgEncounter(msg) ->
+      sub_update(msg, model, encounters.update, mm.MsgEncounter)
     mm.MsgImmunization(msg) ->
       sub_update(msg, model, immunization.update, mm.MsgImmunization)
     mm.MsgMedication(msg) ->
@@ -430,6 +434,9 @@ fn view(model: Model) -> Element(Msg) {
                     mm.PatientAllergies(allergy_form) ->
                       allergy.view(data, allergy_form)
                       |> sub_view(mm.MsgAllergy)
+                    mm.PatientEncounters(encounter_form) ->
+                      encounters.view(data, encounter_form)
+                      |> sub_view(mm.MsgEncounter)
                     mm.PatientImmunizations(immunization_form) ->
                       immunization.view(data, immunization_form)
                       |> sub_view(mm.MsgImmunization)

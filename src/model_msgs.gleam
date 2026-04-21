@@ -63,6 +63,7 @@ pub type PatientData {
   PatientData(
     patient: r4us.Patient,
     patient_allergies: List(r4us.Allergyintolerance),
+    patient_encounters: List(r4us.Encounter),
     patient_immunizations: List(r4us.Immunization),
     patient_medications: List(r4us.Medication),
     patient_medication_requests: List(r4us.Medicationrequest),
@@ -82,6 +83,7 @@ pub type RoutePatientPage {
   PatientOverview
   PatientDemographics(FormState(r4us.Patient))
   PatientAllergies(FormState(r4us.Allergyintolerance))
+  PatientEncounters(FormState(r4us.Encounter))
   PatientImmunizations(FormState(r4us.Immunization))
   PatientMedications(FormState(r4us.Medicationstatement))
   PatientOrders(FormState(r4us.Medicationrequest))
@@ -122,6 +124,7 @@ pub fn route_to_urlstring(route: Route) -> String {
         PatientOverview -> "overview"
         PatientDemographics(_) -> "demographics"
         PatientAllergies(_) -> "allergies"
+        PatientEncounters(_) -> "encounters"
         PatientMedications(_) -> "medications"
         PatientOrders(_) -> "orders"
         PatientVitals(_) -> "vitals"
@@ -143,6 +146,7 @@ pub const pages_patient: List(#(String, RoutePatientPage)) = [
   #("overview", PatientOverview),
   #("demographics", PatientDemographics(FormStateNone)),
   #("allergies", PatientAllergies(FormStateNone)),
+  #("encounters", PatientEncounters(FormStateNone)),
   #("immunizations", PatientImmunizations(FormStateNone)),
   #("medications", PatientMedications(FormStateNone)),
   #("orders", PatientOrders(FormStateNone)),
@@ -179,6 +183,7 @@ pub type Msg {
   ServerReturnedSearchPatients(Result(List(r4us.Patient), r4us_rsvp.Err))
   MsgDemographics(SubmsgDemographics)
   MsgAllergy(SubmsgAllergy)
+  MsgEncounter(SubmsgEncounter)
   MsgImmunization(SubmsgImmunization)
   MsgMedication(SubmsgMedication)
   MsgOrder(SubmsgOrder)
@@ -277,6 +282,19 @@ pub type SubmsgOrder {
   UserClickedEditOrder(String)
   UserClickedDeleteOrder(String)
   UserClickedCloseOrderForm
+}
+
+pub type SubmsgEncounter {
+  ServerCreatedEncounter(Result(r4us.Encounter, r4us_rsvp.Err))
+  ServerUpdatedEncounter(Result(r4us.Encounter, r4us_rsvp.Err))
+  ServerDeletedEncounter(
+    Result(r4us_sansio.OperationoutcomeOrHTTP, r4us_rsvp.Err),
+  )
+  UserSubmittedEncounterForm(Result(r4us.Encounter, Form(r4us.Encounter)))
+  UserClickedCreateEncounter
+  UserClickedEditEncounter(String)
+  UserClickedDeleteEncounter(String)
+  UserClickedCloseEncounterForm
 }
 
 pub type SubmsgImmunization {
