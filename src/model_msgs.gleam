@@ -80,6 +80,7 @@ pub type PatientData {
 // in which case show not found view
 pub type RoutePatientPage {
   PatientOverview
+  PatientDemographics(FormState(r4us.Patient))
   PatientAllergies(FormState(r4us.Allergyintolerance))
   PatientImmunizations(FormState(r4us.Immunization))
   PatientMedications(FormState(r4us.Medicationstatement))
@@ -119,6 +120,7 @@ pub fn route_to_urlstring(route: Route) -> String {
     RoutePatient(_patient, id:, page:) -> {
       let ending = case page {
         PatientOverview -> "overview"
+        PatientDemographics(_) -> "demographics"
         PatientAllergies(_) -> "allergies"
         PatientMedications(_) -> "medications"
         PatientOrders(_) -> "orders"
@@ -139,6 +141,7 @@ pub const pages_no_id: List(#(String, RouteNoId)) = [
 
 pub const pages_patient: List(#(String, RoutePatientPage)) = [
   #("overview", PatientOverview),
+  #("demographics", PatientDemographics(FormStateNone)),
   #("allergies", PatientAllergies(FormStateNone)),
   #("immunizations", PatientImmunizations(FormStateNone)),
   #("medications", PatientMedications(FormStateNone)),
@@ -174,6 +177,7 @@ pub type Msg {
   UserBlurredSearch
   UserSearchedPatient(String)
   ServerReturnedSearchPatients(Result(List(r4us.Patient), r4us_rsvp.Err))
+  MsgDemographics(SubmsgDemographics)
   MsgAllergy(SubmsgAllergy)
   MsgImmunization(SubmsgImmunization)
   MsgMedication(SubmsgMedication)
@@ -199,6 +203,19 @@ pub type SubmsgPhoto {
   UserSelectedPhotoDataUrl(String)
   UserDraggingPhoto(Bool)
   UserClickedExistingPhoto(Int)
+}
+
+pub type SubmsgDemographics {
+  ServerUpdatedPatientDemographics(Result(r4us.Patient, r4us_rsvp.Err))
+  UserClickedEditDemographics
+  UserClickedCloseDemographicsForm
+  UserClickedAddDemographicsName(List(#(String, String)))
+  UserClickedDeleteDemographicsName(List(#(String, String)))
+  UserClickedAddDemographicsRecordedGender(List(#(String, String)))
+  UserClickedDeleteDemographicsRecordedGender(List(#(String, String)))
+  UserClickedAddDemographicsIdentifier(List(#(String, String)))
+  UserClickedDeleteDemographicsIdentifier(List(#(String, String)))
+  UserSubmittedDemographicsForm(Result(r4us.Patient, Form(r4us.Patient)))
 }
 
 pub type SubmsgAllergy {

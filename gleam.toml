@@ -18,6 +18,7 @@ fhir = { git = "https://github.com/PotatoEMR/gleam-fhir.git", ref = "main" }
 modem = ">= 2.1.2 and < 3.0.0"
 formal = ">= 3.0.1 and < 4.0.0"
 lustre = ">= 5.6.0 and < 6.0.0"
+gleam_time = ">= 1.8.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"

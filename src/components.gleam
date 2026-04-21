@@ -189,3 +189,35 @@ pub fn view_form_input(
     })
   ])
 }
+
+pub fn view_form_input_wide(
+  form: Form(a),
+  is type_: String,
+  name name: String,
+  label label: String,
+) -> Element(msg) {
+  let errors = form.field_error_messages(form, name)
+
+  h.div([a.class("w-96 max-w-full")], [
+    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
+      h.text(label),
+      h.text(": "),
+    ]),
+    h.input([
+      a.type_(type_),
+      a.class("border border-slate-700 bg-slate-950 w-full"),
+      case errors {
+        [] -> a.class("focus:outline focus:outline-purple-600")
+        _ -> a.class("outline outline-red-500")
+      },
+      a.id(name),
+      a.name(name),
+      a.value(form.field_value(form, name)),
+    ]),
+    ..list.map(errors, fn(error_message) {
+      h.p([a.class("mt-0.5 text-xs text-red-500")], [
+        h.text(error_message),
+      ])
+    })
+  ])
+}

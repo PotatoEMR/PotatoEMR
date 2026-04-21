@@ -19,6 +19,7 @@ import pages/no_id/notfound
 import pages/no_id/registerpatient
 import pages/no_id/settings
 import pages/patient/allergy
+import pages/patient/demographics
 import pages/patient/immunization
 import pages/patient/medications
 import pages/patient/orders
@@ -204,6 +205,8 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         echo err
         mm.PatientLoadNotFound(utils.err_to_string(err))
       })
+    mm.MsgDemographics(msg) ->
+      sub_update(msg, model, demographics.update, mm.MsgDemographics)
     mm.MsgSettings(msg) ->
       sub_update(msg, model, settings.update, mm.MsgSettings)
     mm.MsgPhoto(msg) -> sub_update(msg, model, photo.update, mm.MsgPhoto)
@@ -421,6 +424,9 @@ fn view(model: Model) -> Element(Msg) {
                 mm.PatientLoadFound(data:) -> {
                   h.div([a.class("flex-1 overflow-y-auto")], case page {
                     mm.PatientOverview -> overview.view(data)
+                    mm.PatientDemographics(demo_form) ->
+                      demographics.view(data, demo_form)
+                      |> sub_view(mm.MsgDemographics)
                     mm.PatientAllergies(allergy_form) ->
                       allergy.view(data, allergy_form)
                       |> sub_view(mm.MsgAllergy)

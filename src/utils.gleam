@@ -7,7 +7,11 @@ import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/order
 import gleam/string
+import gleam/time/calendar as time_calendar
+import gleam/time/duration
+import gleam/time/timestamp
 import lustre/attribute as a
 import lustre/element
 import lustre/element/html as h
@@ -83,10 +87,74 @@ fn operationoutcome_to_string(oo: r4us.Operationoutcome) -> String {
 }
 
 pub fn humannames_to_single_name_string(names: List(r4us.Humanname)) -> String {
-  case names {
-    [] -> "unnamed patient"
-    [first_name, ..] -> humanname_to_string(first_name)
+  case
+    names
+    |> list.max(fn(name1, name2) {
+      case name1.period, name2.period {
+        Some(period1), Some(period2) ->
+          case period1.start, period2.start {
+            Some(start1), Some(start2) ->
+              timestamp.compare(
+                fhir_datetime_to_timestamp(start1),
+                fhir_datetime_to_timestamp(start2),
+              )
+            Some(_), None -> order.Gt
+            None, Some(_) -> order.Lt
+            None, None -> order.Eq
+          }
+        Some(period1), None ->
+          case period1.start {
+            Some(_) -> order.Gt
+            None -> order.Eq
+          }
+        None, Some(period2) ->
+          case period2.start {
+            Some(_) -> order.Lt
+            None -> order.Eq
+          }
+        None, None -> order.Eq
+      }
+    })
+  {
+    Error(_) -> "unnamed patient"
+    Ok(name) -> humanname_to_string(name)
   }
+}
+
+fn fhir_datetime_to_timestamp(dt: primitive_types.DateTime) {
+  let primitive_types.DateTime(date, time) = dt
+  let #(year, month, day) = case date {
+    primitive_types.Year(year) -> #(year, time_calendar.January, 1)
+    primitive_types.YearMonth(year, month) -> #(year, month, 1)
+    primitive_types.YearMonthDay(year, month, day) -> #(year, month, day)
+  }
+  let #(time, offset) = case time {
+    Some(primitive_types.TimeAndZone(time, zone)) -> #(time, case zone {
+      primitive_types.Z -> time_calendar.utc_offset
+      primitive_types.Offset(sign, hours, minutes) -> {
+        let sign = case sign {
+          primitive_types.Plus -> 1
+          primitive_types.Minus -> -1
+        }
+        duration.add(
+          duration.hours(hours * sign),
+          duration.minutes(minutes * sign),
+        )
+      }
+    })
+    None -> #(primitive_types.Time(0, 0, 0, None), time_calendar.utc_offset)
+  }
+  let primitive_types.Time(hour, minute, second, nanosec) = time
+  let nanosec = case nanosec {
+    Some(primitive_types.NanosecWithPrecision(value, _)) -> value
+    None -> 0
+  }
+
+  timestamp.from_calendar(
+    date: time_calendar.Date(year, month, day),
+    time: time_calendar.TimeOfDay(hour, minute, second, nanosec),
+    offset: offset,
+  )
 }
 
 pub fn humanname_to_string(name: r4us.Humanname) -> String {
@@ -113,6 +181,7 @@ pub fn humanname_to_string(name: r4us.Humanname) -> String {
               Some(e) -> e |> primitive_types.datetime_to_string
               None -> "?"
             },
+            ")",
           ])
         None -> ""
       }
