@@ -176,9 +176,13 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       model |> set_search_result(mm.SearchPatientResultsPats(pats)),
       effect.none(),
     )
-    mm.ServerReturnedSearchPatients(Error(_err)) -> {
+    mm.ServerReturnedSearchPatients(Error(err)) -> {
       #(
-        model |> set_search_result(mm.SearchPatientResultsErrMsg("error")),
+        model
+          |> set_search_result(mm.SearchPatientResultsErrMsg(
+            "There was a problem getting patient search from FHIR server: "
+            <> utils.err_to_string(err),
+          )),
         effect.none(),
       )
     }
@@ -269,7 +273,7 @@ fn view(model: Model) -> Element(Msg) {
               ],
               case model.search.results {
                 mm.SearchPatientResultsErrMsg(err_msg:) -> [
-                  h.p([a.class("red-300")], [h.text(err_msg)]),
+                  h.p([a.class("text-red-300")], [h.text(err_msg)]),
                 ]
                 mm.SearchPatientResultsLoadingMsg -> [h.text("loading...")]
                 mm.SearchPatientResultsEmptyMsg -> [h.text("empty")]
@@ -352,7 +356,7 @@ fn view(model: Model) -> Element(Msg) {
     {
       case model.route {
         mm.RouteNoId(route) ->
-          h.main([a.class("my-16 flex-1")], case route {
+          h.main([a.class("flex-1 min-h-0 overflow-y-auto")], case route {
             mm.Index -> index.view()
             mm.Settings -> settings.view(model) |> sub_view(mm.MsgSettings)
             mm.RegisterPatient(newpatient) ->

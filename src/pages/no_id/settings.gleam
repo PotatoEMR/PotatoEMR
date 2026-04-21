@@ -22,8 +22,6 @@ pub fn switch_client(model: Model, baseurl: String) {
 }
 
 pub fn view(model: Model) {
-  let current_url = uri.to_string(model.client.baseurl)
-  echo current_url
   let servers = [
     "https://r4.smarthealthit.org/",
     "https://hapi.fhir.org/baseR4",
@@ -46,7 +44,7 @@ pub fn view(model: Model) {
               h.input([
                 a.type_("radio"),
                 a.name("fhir-server"),
-                a.checked(url == current_url),
+                a.checked(uri.parse(url) == Ok(model.client.baseurl)),
               ]),
               h.span([a.class("ml-2")], [h.text(url)]),
             ],

@@ -178,7 +178,7 @@ pub fn humanname_to_string(name: r4us.Humanname) -> String {
             " - ",
             case p.end {
               Some(e) -> e |> primitive_types.datetime_to_string
-              None -> "?"
+              None -> "now"
             },
             ")",
           ])
