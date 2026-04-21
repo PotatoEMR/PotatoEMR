@@ -1,6 +1,6 @@
 import components.{
   CodingOption, btn, btn_cancel, btn_nomsg, view_form_coding_select,
-  view_form_input, view_form_select, view_form_textarea,
+  view_form_input, view_form_select,
 }
 import fhir/primitive_types
 import fhir/r4us
@@ -110,7 +110,8 @@ pub fn edit(model: Model, edit_id: Option(String)) {
                   |> form.add_string("period_start", case enc.period {
                     Some(p) ->
                       case p.start {
-                        Some(d) -> d |> primitive_types.datetime_to_string
+                        Some(primitive_types.DateTime(date:, ..)) ->
+                          date |> primitive_types.date_to_string
                         None -> ""
                       }
                     None -> ""
@@ -118,14 +119,11 @@ pub fn edit(model: Model, edit_id: Option(String)) {
                   |> form.add_string("period_end", case enc.period {
                     Some(p) ->
                       case p.end {
-                        Some(d) -> d |> primitive_types.datetime_to_string
+                        Some(primitive_types.DateTime(date:, ..)) ->
+                          date |> primitive_types.date_to_string
                         None -> ""
                       }
                     None -> ""
-                  })
-                  |> form.add_string("reason", case enc.reason_code {
-                    [] -> ""
-                    [first, ..] -> option.unwrap(first.text, "")
                   })
                   |> form.add_string("id", edit_id)
                   |> form_to_model(model, pat_id, patient)
@@ -323,15 +321,8 @@ pub fn encounter_schema(enc: r4us.Encounter) {
     None, None -> None
     _, _ -> Some(r4us.Period(..r4us.period_new(), start:, end:))
   }
-  use reason_text <- form.field("reason", form.parse_string)
-  let reason_code = case reason_text {
-    "" -> []
-    _ -> [
-      r4us.Codeableconcept(..r4us.codeableconcept_new(), text: Some(reason_text)),
-    ]
-  }
   form.success(
-    r4us.Encounter(..enc, class:, status:, period:, reason_code:),
+    r4us.Encounter(..enc, class:, status:, period:),
   )
 }
 
@@ -349,7 +340,7 @@ pub fn view(
   let head =
     h.tr(
       [],
-      utils.th_list(["class", "status", "start", "end", "reason", ""]),
+      utils.th_list(["class", "status", "start", "end", ""]),
     )
   let rows =
     list.map(pat.patient_encounters, fn(enc) {
@@ -381,12 +372,6 @@ pub fn view(
                     None -> element.none()
                   }
                 None -> element.none()
-              },
-            ]),
-            h.td([a.class("p-2 max-w-xs truncate")], [
-              case enc.reason_code {
-                [] -> element.none()
-                [first, ..] -> h.text(utils.codeableconcept_to_string(first))
               },
             ]),
             h.td([a.class("p-2 flex gap-2")], [
@@ -476,11 +461,6 @@ pub fn view(
                     is: "date",
                     name: "period_end",
                     label: "end",
-                  ),
-                  view_form_textarea(
-                    encounter_form,
-                    name: "reason",
-                    label: "reason",
                   ),
                   h.div([a.class("w-full flex justify-end gap-2")], [
                     btn_cancel(

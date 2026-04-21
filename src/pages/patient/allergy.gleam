@@ -136,7 +136,8 @@ pub fn edit(model: Model, edit_allergy_id: Option(String)) {
                     "recorded_date",
                     case allergy.recorded_date {
                       None -> ""
-                      Some(rd) -> rd |> primitive_types.datetime_to_string
+                      Some(primitive_types.DateTime(date:, ..)) ->
+                        date |> primitive_types.date_to_string
                     },
                   )
                   // id is in form probably just so view knows if editing or creating
