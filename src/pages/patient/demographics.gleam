@@ -456,6 +456,15 @@ fn values_with_name_count(
   ]
 }
 
+pub fn form_add_name(
+  demo_form: Form(r4us.Patient),
+  values: List(#(String, String)),
+) -> Form(r4us.Patient) {
+  let count = submitted_name_count(values, 0) + 1
+  let values = values |> values_with_name_count(count)
+  demo_form |> form.set_values(values)
+}
+
 fn values_with_recorded_gender_count(
   values: List(#(String, String)),
   count: Int,
@@ -497,6 +506,27 @@ fn values_without_recorded_gender(
       ]
     }
   }
+}
+
+pub fn form_add_recorded_gender(
+  demo_form: Form(r4us.Patient),
+  values: List(#(String, String)),
+) -> Form(r4us.Patient) {
+  let count = submitted_recorded_gender_count(values, 0) + 1
+  let values = values |> values_with_recorded_gender_count(count)
+  demo_form |> form.set_values(values)
+}
+
+pub fn form_delete_recorded_gender(
+  demo_form: Form(r4us.Patient),
+  values: List(#(String, String)),
+) -> Form(r4us.Patient) {
+  let count = submitted_recorded_gender_count(values, 0)
+  let delete_index =
+    submitted_value(values, "delete_recorded_gender")
+    |> parse_unbounded_count_string(-1)
+  let values = values |> values_without_recorded_gender(delete_index, count)
+  demo_form |> form.set_values(values)
 }
 
 fn shifted_recorded_gender_values(
@@ -591,6 +621,18 @@ fn values_without_name(
   }
 }
 
+pub fn form_delete_name(
+  demo_form: Form(r4us.Patient),
+  values: List(#(String, String)),
+) -> Form(r4us.Patient) {
+  let count = submitted_name_count(values, 0)
+  let delete_index =
+    submitted_value(values, "delete_name")
+    |> parse_unbounded_count_string(-1)
+  let values = values |> values_without_name(delete_index, count)
+  demo_form |> form.set_values(values)
+}
+
 fn shifted_name_values(
   values: List(#(String, String)),
   count: Int,
@@ -659,6 +701,15 @@ fn values_with_identifier_count(
   ]
 }
 
+pub fn form_add_identifier(
+  demo_form: Form(r4us.Patient),
+  values: List(#(String, String)),
+) -> Form(r4us.Patient) {
+  let count = submitted_identifier_count(values, 0) + 1
+  let values = values |> values_with_identifier_count(count)
+  demo_form |> form.set_values(values)
+}
+
 fn values_without_identifier(
   values: List(#(String, String)),
   delete_index: Int,
@@ -684,6 +735,18 @@ fn values_without_identifier(
       ]
     }
   }
+}
+
+pub fn form_delete_identifier(
+  demo_form: Form(r4us.Patient),
+  values: List(#(String, String)),
+) -> Form(r4us.Patient) {
+  let count = submitted_identifier_count(values, 0)
+  let delete_index =
+    submitted_value(values, "delete_identifier")
+    |> parse_identifier_count_string(-1)
+  let values = values |> values_without_identifier(delete_index, count)
+  demo_form |> form.set_values(values)
 }
 
 fn shifted_identifier_values(
@@ -754,10 +817,13 @@ const name_count_name = "name_count"
 const recorded_gender_count_name = "recorded_gender_count"
 
 fn add_name_fields(demo_form, names: List(r4us.Humanname)) {
+  let initial_count = case list.length(names) == 0 {
+    True -> 1
+    False -> list.length(names)
+  }
   list.index_fold(
     names,
-    demo_form
-      |> form.add_string(name_count_name, int.to_string(list.length(names))),
+    demo_form |> form.add_string(name_count_name, int.to_string(initial_count)),
     fn(f, name, index) {
       f
       |> form.add_string(name_given_name(index), first_given(name))
@@ -904,13 +970,13 @@ fn name_form_section(demo_form, index: Int) {
         demo_form,
         is: "text",
         name: name_given_name(index),
-        label: "given",
+        label: "first",
       ),
       view_form_input_wide(
         demo_form,
         is: "text",
         name: name_family_name(index),
-        label: "family",
+        label: "last",
       ),
       view_form_input(
         demo_form,
@@ -1181,8 +1247,8 @@ fn recorded_gender_form_section(demo_form, index: Int) {
 }
 
 fn recorded_gender_form_fieldset(
-  recorded_gender_sections: List(element.Element(mm.SubmsgDemographics)),
-  add_recorded_gender_button: element.Element(mm.SubmsgDemographics),
+  recorded_gender_sections: List(element.Element(msg)),
+  add_recorded_gender_button,
 ) {
   h.fieldset(
     [
@@ -1815,10 +1881,7 @@ fn info_row(label: String, value: String) {
   ])
 }
 
-fn name_form_fieldset(
-  name_sections: List(element.Element(mm.SubmsgDemographics)),
-  add_name_button: element.Element(mm.SubmsgDemographics),
-) {
+fn name_form_fieldset(name_sections: List(element.Element(msg)), add_name_button) {
   h.fieldset(
     [
       a.class(
@@ -1836,10 +1899,7 @@ fn name_form_fieldset(
   )
 }
 
-fn identifier_form_fieldset(
-  identifier_sections: List(element.Element(mm.SubmsgDemographics)),
-  add_identifier_button: element.Element(mm.SubmsgDemographics),
-) {
+fn identifier_form_fieldset(identifier_sections: List(element.Element(msg)), add_identifier_button) {
   h.fieldset(
     [
       a.class(
@@ -1857,10 +1917,27 @@ fn identifier_form_fieldset(
   )
 }
 
-fn view_form(demo_form: Form(r4us.Patient), pat: r4us.Patient) {
+pub fn view_patient_form(
+  demo_form: Form(r4us.Patient),
+  pat: r4us.Patient,
+  title: String,
+  submit_label: String,
+  on_submit: fn(Result(r4us.Patient, Form(r4us.Patient))) -> msg,
+  on_add_name: fn(List(#(String, String))) -> msg,
+  on_delete_name: fn(List(#(String, String))) -> msg,
+  on_add_recorded_gender: fn(List(#(String, String))) -> msg,
+  on_delete_recorded_gender: fn(List(#(String, String))) -> msg,
+  on_add_identifier: fn(List(#(String, String))) -> msg,
+  on_delete_identifier: fn(List(#(String, String))) -> msg,
+  cancel_button: Option(#(String, msg)),
+) {
+  let initial_name_count = case list.length(pat.name) == 0 {
+    True -> 1
+    False -> list.length(pat.name)
+  }
   let name_count =
     form.field_value(demo_form, name_count_name)
-    |> parse_unbounded_count_string(list.length(pat.name))
+    |> parse_unbounded_count_string(initial_name_count)
   let name_slots = list.repeat(0, times: name_count)
   let name_sections =
     list.index_map(name_slots, fn(_, i) { name_form_section(demo_form, i) })
@@ -1928,22 +2005,20 @@ fn view_form(demo_form: Form(r4us.Patient), pat: r4us.Patient) {
                                 demo_form
                                 |> form.add_values(values)
                                 |> form.run
-                                |> mm.UserSubmittedDemographicsForm
+                                |> on_submit
                               _ ->
-                                mm.UserClickedDeleteDemographicsIdentifier(
-                                  values,
-                                )
+                                on_delete_identifier(values)
                             }
-                          _ -> mm.UserClickedAddDemographicsIdentifier(values)
+                          _ -> on_add_identifier(values)
                         }
                       _ ->
-                        mm.UserClickedDeleteDemographicsRecordedGender(values)
+                        on_delete_recorded_gender(values)
                     }
-                  _ -> mm.UserClickedAddDemographicsRecordedGender(values)
+                  _ -> on_add_recorded_gender(values)
                 }
-              _ -> mm.UserClickedDeleteDemographicsName(values)
+              _ -> on_delete_name(values)
             }
-          _ -> mm.UserClickedAddDemographicsName(values)
+          _ -> on_add_name(values)
         }
       }),
     ],
@@ -1957,7 +2032,7 @@ fn view_form(demo_form: Form(r4us.Patient), pat: r4us.Patient) {
         list.flatten([
           [
             h.legend([a.class("px-2 text-sm font-bold text-slate-200")], [
-              h.text("Edit Demographics"),
+              h.text(title),
             ]),
             h.input([
               a.type_("hidden"),
@@ -2062,7 +2137,7 @@ fn view_form(demo_form: Form(r4us.Patient), pat: r4us.Patient) {
             view_form_select(
               demo_form,
               name: "deceased",
-              options: ["deceased", "alive"],
+              options: ["yes", "no"],
               label: "deceased",
             ),
             view_form_input(
@@ -2084,15 +2159,32 @@ fn view_form(demo_form: Form(r4us.Patient), pat: r4us.Patient) {
               label: "emergency contact email",
             ),
             h.div([a.class("w-full flex justify-end gap-2")], [
-              btn_cancel(
-                "Cancel",
-                on_click: mm.UserClickedCloseDemographicsForm,
-              ),
-              btn_nomsg("Save"),
+              case cancel_button {
+                Some(#(label, msg)) -> btn_cancel(label, on_click: msg)
+                None -> element.none()
+              },
+              btn_nomsg(submit_label),
             ]),
           ],
         ]),
       ),
     ],
+  )
+}
+
+fn view_form(demo_form: Form(r4us.Patient), pat: r4us.Patient) {
+  view_patient_form(
+    demo_form,
+    pat,
+    "Edit Demographics",
+    "Save",
+    mm.UserSubmittedDemographicsForm,
+    mm.UserClickedAddDemographicsName,
+    mm.UserClickedDeleteDemographicsName,
+    mm.UserClickedAddDemographicsRecordedGender,
+    mm.UserClickedDeleteDemographicsRecordedGender,
+    mm.UserClickedAddDemographicsIdentifier,
+    mm.UserClickedDeleteDemographicsIdentifier,
+    Some(#("Cancel", mm.UserClickedCloseDemographicsForm)),
   )
 }

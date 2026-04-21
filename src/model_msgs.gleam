@@ -194,6 +194,12 @@ pub type SubmsgSettings {
 
 pub type SubmsgRegisterPatient {
   UserClickedRegisterPatient(Result(r4us.Patient, Form(r4us.Patient)))
+  UserClickedAddRegisterPatientName(List(#(String, String)))
+  UserClickedDeleteRegisterPatientName(List(#(String, String)))
+  UserClickedAddRegisterPatientRecordedGender(List(#(String, String)))
+  UserClickedDeleteRegisterPatientRecordedGender(List(#(String, String)))
+  UserClickedAddRegisterPatientIdentifier(List(#(String, String)))
+  UserClickedDeleteRegisterPatientIdentifier(List(#(String, String)))
   ServerReturnedRegisterPatient(Result(r4us.Patient, r4us_rsvp.Err))
 }
 
