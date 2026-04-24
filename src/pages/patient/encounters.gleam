@@ -20,6 +20,7 @@ import lustre/event
 import model_msgs.{type Model, Model} as mm
 import terminology/actcode
 import utils
+import colors
 
 pub fn update(msg, model) {
   case msg {
@@ -628,7 +629,7 @@ pub fn view(pat: mm.PatientData, encounter_form: mm.FormState(mm.EncounterNote))
       case enc.id {
         None -> element.none()
         Some(enc_id) ->
-          h.tr([a.class("border-b border-slate-700")], [
+          h.tr([a.class("border-b " <> colors.border_slate_700)], [
             h.td([a.class("p-2")], [
               h.text(class_display(option.unwrap(enc.class.code, ""))),
             ]),
@@ -673,7 +674,7 @@ pub fn view(pat: mm.PatientData, encounter_form: mm.FormState(mm.EncounterNote))
         h.h1([a.class("text-xl font-bold")], [h.text("Encounters")]),
         btn("Create New Encounter", on_click: mm.UserClickedCreateEncounter),
       ]),
-      h.table([a.class("border-collapse border border-slate-700")], [
+      h.table([a.class("border-collapse border " <> colors.border_slate_700)], [
         h.thead([], [head]),
         h.tbody([], rows),
       ]),
@@ -702,11 +703,11 @@ pub fn view(pat: mm.PatientData, encounter_form: mm.FormState(mm.EncounterNote))
               h.fieldset(
                 [
                   a.class(
-                    "border border-slate-700 rounded-lg p-4 flex flex-row flex-wrap gap-4",
+                    "border " <> colors.border_slate_700 <> " rounded-lg p-4 flex flex-row flex-wrap gap-4",
                   ),
                 ],
                 [
-                  h.legend([a.class("px-2 text-sm font-bold text-slate-200")], [
+                  h.legend([a.class("px-2 text-sm font-bold " <> colors.text_slate_200)], [
                     h.text(legend_text),
                   ]),
                   view_form_coding_select(

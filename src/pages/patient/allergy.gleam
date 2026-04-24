@@ -18,6 +18,7 @@ import lustre/event
 import model_msgs.{type Model, Model} as mm
 import terminology/substancecodes
 import utils
+import colors
 
 pub fn update(msg, model) {
   case msg {
@@ -399,7 +400,7 @@ pub fn view(
       case allergy.id {
         None -> element.none()
         Some(allergy_id) ->
-          h.tr([a.class("border-b border-slate-700")], [
+          h.tr([a.class("border-b " <> colors.border_slate_700)], [
             h.td([a.class("p-2")], [
               case allergy.code {
                 None -> element.none()
@@ -456,7 +457,7 @@ pub fn view(
           on_click: mm.UserClickedCreateAllergy,
         ),
       ]),
-      h.table([a.class("border-collapse border border-slate-700")], [
+      h.table([a.class("border-collapse border " <> colors.border_slate_700)], [
         h.thead([], [head]),
         h.tbody([], rows),
       ]),
@@ -490,11 +491,11 @@ pub fn view(
               h.fieldset(
                 [
                   a.class(
-                    "border border-slate-700 rounded-lg p-4 flex flex-row flex-wrap gap-4",
+                    "border " <> colors.border_slate_700 <> " rounded-lg p-4 flex flex-row flex-wrap gap-4",
                   ),
                 ],
                 [
-                  h.legend([a.class("px-2 text-sm font-bold text-slate-200")], [
+                  h.legend([a.class("px-2 text-sm font-bold " <> colors.text_slate_200)], [
                     h.text(legend_text),
                   ]),
                   view_form_coding_select(

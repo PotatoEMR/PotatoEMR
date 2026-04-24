@@ -30,6 +30,7 @@ import pages/patient/photo
 import pages/patient/vitals
 import utils
 import utils2
+import colors
 
 const patient_photo_placeholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Cpath fill='%23ccc' d='M 104.68731,56.689353 C 102.19435,80.640493 93.104981,97.26875 74.372196,97.26875 55.639402,97.26875 46.988823,82.308034 44.057005,57.289941 41.623314,34.938838 55.639402,15.800152 74.372196,15.800152 c 18.732785,0 32.451944,18.493971 30.315114,40.889201 z'/%3E%3Cpath fill='%23ccc' d='M 92.5675 89.6048 C 90.79484 93.47893 89.39893 102.4504 94.86478 106.9039 C 103.9375 114.2963 106.7064 116.4723 118.3117 118.9462 C 144.0432 124.4314 141.6492 138.1543 146.5244 149.2206 L 4.268444 149.1023 C 8.472223 138.6518 6.505799 124.7812 32.40051 118.387 C 41.80992 116.0635 45.66513 113.8823 53.58659 107.0158 C 58.52744 102.7329 57.52583 93.99267 56.43084 89.26926 C 52.49275 88.83011 94.1739 88.14054 92.5675 89.6048 z'/%3E%3C/svg%3E"
 
@@ -247,15 +248,15 @@ fn set_search_visible(model: Model, visible: Bool) {
 
 // VIEW ------------------------------------------------------------------------
 
-const nav_bar_class = "flex flex-wrap items-end space-x-1 px-2 min-h-10 bg-slate-800 border-b border-slate-700"
+const nav_bar_class = "flex flex-wrap items-end space-x-1 px-2 min-h-10 " <> colors.bg_slate_800 <> " border-b " <> colors.border_slate_700
 
 fn view(model: Model) -> Element(Msg) {
-  h.div([a.class("w-full h-dvh flex flex-col bg-slate-900 text-white")], [
+  h.div([a.class("w-full h-dvh flex flex-col " <> colors.bg_slate_900 <> " " <> colors.text_white)], [
     h.nav([a.class(nav_bar_class)], [
       h.div([a.class("relative")], [
         h.input([
           a.class(
-            "w-lg max-w-[calc(100vw-2rem)] h-8 m-1 pl-4 rounded-full border border-slate-700 bg-slate-950 focus:outline focus:outline-purple-600",
+            "w-lg max-w-[calc(100vw-2rem)] h-8 m-1 pl-4 rounded-full border " <> colors.border_slate_700 <> " " <> colors.bg_slate_950 <> " focus:outline " <> colors.focus_outline_purple_600,
           ),
           a.placeholder("⌕ search patient name"),
           event.on_focus(mm.UserFocusedSearch),
@@ -268,13 +269,13 @@ fn view(model: Model) -> Element(Msg) {
             h.div(
               [
                 a.class(
-                  "absolute top-full left-0 -mt-1 bg-slate-800 border border-slate-700 w-3xl max-w-[calc(100vw-1rem)] h-120 max-h-[calc(100dvh-4rem)] overflow-auto z-50",
+                  "absolute top-full left-0 -mt-1 " <> colors.bg_slate_800 <> " border " <> colors.border_slate_700 <> " w-3xl max-w-[calc(100vw-1rem)] h-120 max-h-[calc(100dvh-4rem)] overflow-auto z-50",
                 ),
                 event.prevent_default(event.on_mouse_down(mm.UserFocusedSearch)),
               ],
               case model.search.results {
                 mm.SearchPatientResultsErrMsg(err_msg:) -> [
-                  h.p([a.class("text-red-300")], [h.text(err_msg)]),
+                  h.p([a.class(colors.text_red_300)], [h.text(err_msg)]),
                 ]
                 mm.SearchPatientResultsLoadingMsg -> [h.text("loading...")]
                 mm.SearchPatientResultsEmptyMsg -> [h.text("type name to search patient by name")]
@@ -317,7 +318,7 @@ fn view(model: Model) -> Element(Msg) {
                                   mm.PatientOverview,
                                 )),
                                 a.class(
-                                  "flex items-center gap-3 p-4 hover:bg-slate-900",
+                                  "flex items-center gap-3 p-4 " <> colors.hover_bg_slate_900,
                                 ),
                               ],
                               [
@@ -329,7 +330,7 @@ fn view(model: Model) -> Element(Msg) {
                                   h.p([a.class("font-bold")], [
                                     h.text(name),
                                   ]),
-                                  h.p([a.class("text-sm text-slate-400")], [
+                                  h.p([a.class("text-sm " <> colors.text_slate_400)], [
                                     h.text(detail),
                                   ]),
                                 ]),
@@ -370,7 +371,7 @@ fn view(model: Model) -> Element(Msg) {
             h.nav(
               [
                 a.class(
-                  "w-full md:w-56 shrink-0 bg-slate-800 border-b md:border-b-0 md:border-r border-slate-700 flex flex-row md:flex-col items-center gap-2 md:gap-0 p-2",
+                  "w-full md:w-56 shrink-0 " <> colors.bg_slate_800 <> " border-b md:border-b-0 md:border-r " <> colors.border_slate_700 <> " flex flex-row md:flex-col items-center gap-2 md:gap-0 p-2",
                 ),
               ],
               case patient {
@@ -459,7 +460,7 @@ fn view(model: Model) -> Element(Msg) {
                     allergies -> #(
                       "Allergies",
                       h.ul(
-                        [a.class("text-slate-400 list-disc pl-5")],
+                        [a.class(colors.text_slate_400 <> " list-disc pl-5")],
                         list.map(allergies, fn(al) {
                           let name = case al.code {
                             None -> "unspecified"
@@ -474,7 +475,7 @@ fn view(model: Model) -> Element(Msg) {
                     h.div(
                       [a.class("hidden md:flex flex-col w-full mt-3 text-sm")],
                       [
-                        h.div([a.class("font-semibold text-slate-300")], [
+                        h.div([a.class("font-semibold " <> colors.text_slate_300)], [
                           h.text(allergies_label),
                         ]),
                         allergies_list,
@@ -487,7 +488,7 @@ fn view(model: Model) -> Element(Msg) {
                     meds -> #(
                       "Medications",
                       h.ul(
-                        [a.class("text-slate-400 list-disc pl-5")],
+                        [a.class(colors.text_slate_400 <> " list-disc pl-5")],
                         list.map(meds, fn(ms) {
                           let name = case ms.medication {
                             r4us.MedicationstatementMedicationCodeableconcept(
@@ -505,7 +506,7 @@ fn view(model: Model) -> Element(Msg) {
                     h.div(
                       [a.class("hidden md:flex flex-col w-full mt-3 text-sm")],
                       [
-                        h.div([a.class("font-semibold text-slate-300")], [
+                        h.div([a.class("font-semibold " <> colors.text_slate_300)], [
                           h.text(meds_label),
                         ]),
                         meds_list,
@@ -531,24 +532,24 @@ fn view(model: Model) -> Element(Msg) {
                     case gender {
                       "" -> element.none()
                       s ->
-                        h.div([a.class("text-sm text-slate-400")], [h.text(s)])
+                        h.div([a.class("text-sm " <> colors.text_slate_400)], [h.text(s)])
                     },
                     case birth_date {
                       "" -> element.none()
                       s ->
-                        h.div([a.class("text-sm text-slate-400")], [h.text(s)])
+                        h.div([a.class("text-sm " <> colors.text_slate_400)], [h.text(s)])
                     },
                     case pcp {
                       "" -> element.none()
                       s ->
-                        h.div([a.class("text-sm text-slate-400")], [
+                        h.div([a.class("text-sm " <> colors.text_slate_400)], [
                           h.text("PCP: " <> s),
                         ])
                     },
                     case attending {
                       "" -> element.none()
                       s ->
-                        h.div([a.class("text-sm text-slate-400")], [
+                        h.div([a.class("text-sm " <> colors.text_slate_400)], [
                           h.text("Attending: " <> s),
                         ])
                     },
@@ -644,8 +645,8 @@ fn view_header_link(
             "flex items-center px-3 py-1 rounded-t-2xl border-x border-t underline",
             True,
           ),
-          #("hover:text-slate-300 border-transparent", !active),
-          #("bg-[#0f172b] border-slate-700", active),
+          #(colors.hover_text_slate_300 <> " " <> colors.border_transparent, !active),
+          #(colors.bg_0f172b <> " " <> colors.border_slate_700, active),
         ]),
       ],
       [h.text(text)],

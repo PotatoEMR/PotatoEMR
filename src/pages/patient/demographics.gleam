@@ -20,6 +20,7 @@ import lustre/event
 import model_msgs.{type Model, Model} as mm
 import terminology/genderidentity
 import utils
+import colors
 
 pub fn update(msg, model) {
   case msg {
@@ -990,10 +991,10 @@ fn name_form_section(demo_form, index: Int) {
   let label = "name " <> int.to_string(index + 1)
   h.fieldset(
     [
-      a.class("w-full border border-slate-700 rounded p-2 flex flex-wrap gap-4"),
+      a.class("w-full border " <> colors.border_slate_700 <> " rounded p-2 flex flex-wrap gap-4"),
     ],
     [
-      h.legend([a.class("px-2 text-xs text-slate-400")], [h.text(label)]),
+      h.legend([a.class("px-2 text-xs " <> colors.text_slate_400)], [h.text(label)]),
       view_form_input_wide(
         demo_form,
         is: "text",
@@ -1225,10 +1226,10 @@ fn recorded_gender_form_section(demo_form, index: Int) {
   let label = "recorded gender " <> int.to_string(index + 1)
   h.fieldset(
     [
-      a.class("w-full border border-slate-700 rounded p-2 flex flex-wrap gap-4"),
+      a.class("w-full border " <> colors.border_slate_700 <> " rounded p-2 flex flex-wrap gap-4"),
     ],
     [
-      h.legend([a.class("px-2 text-xs text-slate-400")], [h.text(label)]),
+      h.legend([a.class("px-2 text-xs " <> colors.text_slate_400)], [h.text(label)]),
       view_form_select(
         demo_form,
         name: value_name,
@@ -1281,11 +1282,11 @@ fn recorded_gender_form_fieldset(
   h.fieldset(
     [
       a.class(
-        "w-full border border-slate-700 rounded-lg p-4 flex flex-row flex-wrap gap-4",
+        "w-full border " <> colors.border_slate_700 <> " rounded-lg p-4 flex flex-row flex-wrap gap-4",
       ),
     ],
     [
-      h.legend([a.class("px-2 text-sm font-bold text-slate-200")], [
+      h.legend([a.class("px-2 text-sm font-bold " <> colors.text_slate_200)], [
         h.text("Recorded Gender"),
       ]),
       ..list.append(recorded_gender_sections, [
@@ -1447,10 +1448,10 @@ fn identifier_form_section(demo_form, index: Int) {
   let label = "identifier " <> int.to_string(index + 1)
   h.fieldset(
     [
-      a.class("w-full border border-slate-700 rounded p-2 flex flex-wrap gap-4"),
+      a.class("w-full border " <> colors.border_slate_700 <> " rounded p-2 flex flex-wrap gap-4"),
     ],
     [
-      h.legend([a.class("px-2 text-xs text-slate-400")], [h.text(label)]),
+      h.legend([a.class("px-2 text-xs " <> colors.text_slate_400)], [h.text(label)]),
       view_form_input_wide(
         demo_form,
         is: "text",
@@ -1874,20 +1875,20 @@ fn view_info(pat: r4us.Patient) {
     [] -> ""
   }
   h.div([], [
-    h.div([a.class("flex gap-4 py-2 border-b border-slate-700")], [
-      h.span([a.class("font-bold w-40 text-slate-400")], [h.text("Names")]),
+    h.div([a.class("flex gap-4 py-2 border-b " <> colors.border_slate_700)], [
+      h.span([a.class("font-bold w-40 " <> colors.text_slate_400)], [h.text("Names")]),
       names_display,
     ]),
     info_row("Gender", gender),
-    h.div([a.class("flex gap-4 py-2 border-b border-slate-700")], [
-      h.span([a.class("font-bold w-40 text-slate-400")], [
+    h.div([a.class("flex gap-4 py-2 border-b " <> colors.border_slate_700)], [
+      h.span([a.class("font-bold w-40 " <> colors.text_slate_400)], [
         h.text("Recorded Genders"),
       ]),
       recorded_gender_display,
     ]),
     info_row("Birth Date", birth_date),
-    h.div([a.class("flex gap-4 py-2 border-b border-slate-700")], [
-      h.span([a.class("font-bold w-40 text-slate-400")], [h.text("Identifiers")]),
+    h.div([a.class("flex gap-4 py-2 border-b " <> colors.border_slate_700)], [
+      h.span([a.class("font-bold w-40 " <> colors.text_slate_400)], [h.text("Identifiers")]),
       identifiers_display,
     ]),
     info_row("Phone", phone),
@@ -1903,8 +1904,8 @@ fn view_info(pat: r4us.Patient) {
 }
 
 fn info_row(label: String, value: String) {
-  h.div([a.class("flex gap-4 py-2 border-b border-slate-700")], [
-    h.span([a.class("font-bold w-40 text-slate-400")], [h.text(label)]),
+  h.div([a.class("flex gap-4 py-2 border-b " <> colors.border_slate_700)], [
+    h.span([a.class("font-bold w-40 " <> colors.text_slate_400)], [h.text(label)]),
     h.span([], [h.text(value)]),
   ])
 }
@@ -1916,11 +1917,11 @@ fn name_form_fieldset(
   h.fieldset(
     [
       a.class(
-        "w-full border border-slate-700 rounded-lg p-4 flex flex-row flex-wrap gap-4",
+        "w-full border " <> colors.border_slate_700 <> " rounded-lg p-4 flex flex-row flex-wrap gap-4",
       ),
     ],
     [
-      h.legend([a.class("px-2 text-sm font-bold text-slate-200")], [
+      h.legend([a.class("px-2 text-sm font-bold " <> colors.text_slate_200)], [
         h.text("Names"),
       ]),
       ..list.append(name_sections, [
@@ -1937,11 +1938,11 @@ fn identifier_form_fieldset(
   h.fieldset(
     [
       a.class(
-        "w-full border border-slate-700 rounded-lg p-4 flex flex-row flex-wrap gap-4",
+        "w-full border " <> colors.border_slate_700 <> " rounded-lg p-4 flex flex-row flex-wrap gap-4",
       ),
     ],
     [
-      h.legend([a.class("px-2 text-sm font-bold text-slate-200")], [
+      h.legend([a.class("px-2 text-sm font-bold " <> colors.text_slate_200)], [
         h.text("Identifiers"),
       ]),
       ..list.append(identifier_sections, [
@@ -2060,12 +2061,12 @@ pub fn view_patient_form(
       h.fieldset(
         [
           a.class(
-            "border border-slate-700 rounded-lg p-4 flex flex-row flex-wrap gap-4",
+            "border " <> colors.border_slate_700 <> " rounded-lg p-4 flex flex-row flex-wrap gap-4",
           ),
         ],
         list.flatten([
           [
-            h.legend([a.class("px-2 text-sm font-bold text-slate-200")], [
+            h.legend([a.class("px-2 text-sm font-bold " <> colors.text_slate_200)], [
               h.text(title),
             ]),
             h.input([
@@ -2089,7 +2090,7 @@ pub fn view_patient_form(
                 h.div(
                   [
                     a.class(
-                      "w-full rounded border border-red-700 bg-red-950 px-3 py-2 text-sm text-red-100",
+                      "w-full rounded border " <> colors.border_red_700 <> " " <> colors.bg_red_950 <> " px-3 py-2 text-sm " <> colors.text_red_100,
                     ),
                   ],
                   list.map(errors, h.text),

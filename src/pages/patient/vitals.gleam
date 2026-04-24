@@ -18,6 +18,7 @@ import lustre/element/html as h
 import lustre/event
 import model_msgs.{type Model, Model} as mm
 import utils
+import colors
 
 pub const vital_columns: List(#(String, String, String)) = [
   #("8867-4", "Heart Rate (/min)", "heart_rate"),
@@ -137,7 +138,7 @@ fn fixed_header_row_attrs(extra_class: String) {
 fn fixed_label_cell(label: String) -> Element(msg) {
   h.th(
     [
-      a.class("text-left border border-slate-700"),
+      a.class("text-left border " <> colors.border_slate_700),
       a.attribute("style", label_cell_style),
     ],
     [
@@ -158,7 +159,7 @@ fn fixed_label_cell(label: String) -> Element(msg) {
 fn fixed_blank_header_cell() -> Element(msg) {
   h.th(
     [
-      a.class("border border-slate-700"),
+      a.class("border " <> colors.border_slate_700),
       a.attribute("style", header_label_cell_style),
     ],
     [h.div([a.class("h-full")], [])],
@@ -168,7 +169,7 @@ fn fixed_blank_header_cell() -> Element(msg) {
 fn fixed_blank_footer_cell() -> Element(msg) {
   h.td(
     [
-      a.class("border border-slate-700"),
+      a.class("border " <> colors.border_slate_700),
       a.attribute("style", label_cell_style),
     ],
     [h.div([a.class("h-full")], [])],
@@ -737,7 +738,7 @@ pub fn view(
         _, _ ->
           h.th(
             fixed_header_time_column_attrs(
-              "p-2 text-left border border-slate-700",
+              "p-2 text-left border " <> colors.border_slate_700,
             ),
             [
               fixed_header_time_column_inner([
@@ -783,7 +784,7 @@ pub fn view(
                 Error(_) -> ""
               }
               h.td(
-                fixed_time_column_attrs("p-2 text-left border border-slate-700"),
+                fixed_time_column_attrs("p-2 text-left border " <> colors.border_slate_700),
                 [
                   fixed_time_column_inner([
                     h.div(
@@ -802,7 +803,7 @@ pub fn view(
             }
           }
         })
-      h.tr(fixed_row_attrs("border-b border-slate-700"), [
+      h.tr(fixed_row_attrs("border-b " <> colors.border_slate_700), [
         fixed_label_cell(label),
         ..list.append(form_input_cells, time_cells)
       ])
@@ -818,7 +819,7 @@ pub fn view(
 
   let form_footer_cell = case is_creating {
     True -> [
-      h.td(fixed_time_column_attrs("p-2 border border-slate-700"), [save_cancel]),
+      h.td(fixed_time_column_attrs("p-2 border " <> colors.border_slate_700), [save_cancel]),
     ]
     False -> []
   }
@@ -837,7 +838,7 @@ pub fn view(
           ]),
         ]
       }
-      h.td(fixed_time_column_attrs("p-2 border border-slate-700"), content)
+      h.td(fixed_time_column_attrs("p-2 border " <> colors.border_slate_700), content)
     })
   let footer_rows = [
     h.tr(fixed_row_attrs(""), [
@@ -847,7 +848,7 @@ pub fn view(
   ]
 
   let table =
-    h.table([a.class("border-collapse border border-slate-700 table-fixed")], [
+    h.table([a.class("border-collapse border " <> colors.border_slate_700 <> " table-fixed")], [
       h.thead([], [head]),
       h.tbody([], rows),
       h.tfoot([], footer_rows),
@@ -888,12 +889,12 @@ fn form_datetime_cell(f: Form(a)) -> Element(mm.SubmsgVitals) {
   let errors = form.field_error_messages(f, name)
   h.th(
     fixed_header_time_column_attrs(
-      "p-2 text-left border border-slate-700 align-top",
+      "p-2 text-left border " <> colors.border_slate_700 <> " align-top",
     ),
     [
       fixed_header_time_column_inner([
         h.input([
-          a.class("bg-slate-800 border border-slate-700 rounded"),
+          a.class(colors.bg_slate_800 <> " border " <> colors.border_slate_700 <> " rounded"),
           a.attribute(
             "style",
             "display: block; width: 100%; max-width: 100%; min-width: 0; height: 2rem; box-sizing: border-box;",
@@ -903,7 +904,7 @@ fn form_datetime_cell(f: Form(a)) -> Element(mm.SubmsgVitals) {
           a.value(form.field_value(f, name)),
         ]),
         ..list.map(errors, fn(e) {
-          h.div([a.class("text-xs text-red-400 leading-tight mt-1")], [
+          h.div([a.class("text-xs " <> colors.text_red_400 <> " leading-tight mt-1")], [
             h.text(e),
           ])
         })
@@ -919,7 +920,7 @@ fn form_value_cell(
 ) -> Element(mm.SubmsgVitals) {
   case code {
     "85354-9" ->
-      h.td(fixed_time_column_attrs("p-2 border border-slate-700 align-top"), [
+      h.td(fixed_time_column_attrs("p-2 border " <> colors.border_slate_700 <> " align-top"), [
         fixed_time_column_inner([
           h.div(
             [
@@ -938,7 +939,7 @@ fn form_value_cell(
         ]),
       ])
     _ ->
-      h.td(fixed_time_column_attrs("p-2 border border-slate-700 align-top"), [
+      h.td(fixed_time_column_attrs("p-2 border " <> colors.border_slate_700 <> " align-top"), [
         fixed_time_column_inner([number_input(f, field_name)]),
       ])
   }
@@ -946,7 +947,7 @@ fn form_value_cell(
 
 fn number_input(f: Form(a), name: String) -> Element(msg) {
   h.input([
-    a.class("bg-slate-800 border border-slate-700 rounded w-full"),
+    a.class(colors.bg_slate_800 <> " border " <> colors.border_slate_700 <> " rounded w-full"),
     a.attribute(
       "style",
       "display: block; width: 100%; max-width: 100%; min-width: 0; height: 2rem; box-sizing: border-box;",

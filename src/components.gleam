@@ -4,6 +4,7 @@ import lustre/attribute as a
 import lustre/element.{type Element}
 import lustre/element/html as h
 import lustre/event
+import colors
 
 pub type CodingOption {
   CodingOption(code: String, display: String, system: String)
@@ -12,8 +13,8 @@ pub type CodingOption {
 pub fn btn_attrs() {
   [
     a.class("text-sm font-bold px-4 py-2 rounded-lg cursor-pointer"),
-    a.class("border border-slate-700 text-slate-200 bg-slate-800"),
-    a.class("hover:bg-slate-700"),
+    a.class("border " <> colors.border_slate_700 <> " " <> colors.text_slate_200 <> " " <> colors.bg_slate_800),
+    a.class(colors.hover_bg_slate_700),
   ]
 }
 
@@ -41,16 +42,16 @@ pub fn view_form_select(
   let current_value = form.field_value(form, name)
 
   h.div([], [
-    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
+    h.label([a.for(name), a.class("block text-xs font-bold " <> colors.text_slate_600)], [
       h.text(label),
       h.text(": "),
     ]),
     h.select(
       [
-        a.class("border border-slate-700 bg-slate-950"),
+        a.class("border " <> colors.border_slate_700 <> " " <> colors.bg_slate_950),
         case errors {
-          [] -> a.class("focus:outline focus:outline-purple-600")
-          _ -> a.class("outline outline-red-500")
+          [] -> a.class("focus:outline " <> colors.focus_outline_purple_600)
+          _ -> a.class("outline " <> colors.outline_red_500)
         },
         a.id(name),
         a.name(name),
@@ -66,7 +67,7 @@ pub fn view_form_select(
       ],
     ),
     ..list.map(errors, fn(error_message) {
-      h.p([a.class("mt-0.5 text-xs text-red-500")], [
+      h.p([a.class("mt-0.5 text-xs " <> colors.text_red_500)], [
         h.text(error_message),
       ])
     })
@@ -83,16 +84,16 @@ pub fn view_form_coding_select(
   let current_value = form.field_value(form, name)
 
   h.div([], [
-    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
+    h.label([a.for(name), a.class("block text-xs font-bold " <> colors.text_slate_600)], [
       h.text(label),
       h.text(": "),
     ]),
     h.select(
       [
-        a.class("border border-slate-700 bg-slate-950"),
+        a.class("border " <> colors.border_slate_700 <> " " <> colors.bg_slate_950),
         case errors {
-          [] -> a.class("focus:outline focus:outline-purple-600")
-          _ -> a.class("outline outline-red-500")
+          [] -> a.class("focus:outline " <> colors.focus_outline_purple_600)
+          _ -> a.class("outline " <> colors.outline_red_500)
         },
         a.id(name),
         a.name(name),
@@ -108,7 +109,7 @@ pub fn view_form_coding_select(
       ],
     ),
     ..list.map(errors, fn(error_message) {
-      h.p([a.class("mt-0.5 text-xs text-red-500")], [
+      h.p([a.class("mt-0.5 text-xs " <> colors.text_red_500)], [
         h.text(error_message),
       ])
     })
@@ -123,16 +124,16 @@ pub fn view_form_textarea(
   let errors = form.field_error_messages(form, name)
 
   h.div([a.class("w-full")], [
-    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
+    h.label([a.for(name), a.class("block text-xs font-bold " <> colors.text_slate_600)], [
       h.text(label),
       h.text(": "),
     ]),
     h.textarea(
       [
-        a.class("border border-slate-700 bg-slate-950 w-full resize"),
+        a.class("border " <> colors.border_slate_700 <> " " <> colors.bg_slate_950 <> " w-full resize"),
         case errors {
-          [] -> a.class("focus:outline focus:outline-purple-600")
-          _ -> a.class("outline outline-red-500")
+          [] -> a.class("focus:outline " <> colors.focus_outline_purple_600)
+          _ -> a.class("outline " <> colors.outline_red_500)
         },
         a.id(name),
         a.name(name),
@@ -141,7 +142,7 @@ pub fn view_form_textarea(
       form.field_value(form, name),
     ),
     ..list.map(errors, fn(error_message) {
-      h.p([a.class("mt-0.5 text-xs text-red-500")], [
+      h.p([a.class("mt-0.5 text-xs " <> colors.text_red_500)], [
         h.text(error_message),
       ])
     })
@@ -157,23 +158,23 @@ pub fn view_form_input(
   let errors = form.field_error_messages(form, name)
 
   h.div([], [
-    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
+    h.label([a.for(name), a.class("block text-xs font-bold " <> colors.text_slate_600)], [
       h.text(label),
       h.text(": "),
     ]),
     h.input([
       a.type_(type_),
-      a.class("border border-slate-700 bg-slate-950"),
+      a.class("border " <> colors.border_slate_700 <> " " <> colors.bg_slate_950),
       case errors {
-        [] -> a.class("focus:outline focus:outline-purple-600")
-        _ -> a.class("outline outline-red-500")
+        [] -> a.class("focus:outline " <> colors.focus_outline_purple_600)
+        _ -> a.class("outline " <> colors.outline_red_500)
       },
       a.id(name),
       a.name(name),
       a.value(form.field_value(form, name)),
     ]),
     ..list.map(errors, fn(error_message) {
-      h.p([a.class("mt-0.5 text-xs text-red-500")], [
+      h.p([a.class("mt-0.5 text-xs " <> colors.text_red_500)], [
         h.text(error_message),
       ])
     })
@@ -189,23 +190,23 @@ pub fn view_form_input_wide(
   let errors = form.field_error_messages(form, name)
 
   h.div([a.class("w-96 max-w-full")], [
-    h.label([a.for(name), a.class("block text-xs font-bold text-slate-600")], [
+    h.label([a.for(name), a.class("block text-xs font-bold " <> colors.text_slate_600)], [
       h.text(label),
       h.text(": "),
     ]),
     h.input([
       a.type_(type_),
-      a.class("border border-slate-700 bg-slate-950 w-full"),
+      a.class("border " <> colors.border_slate_700 <> " " <> colors.bg_slate_950 <> " w-full"),
       case errors {
-        [] -> a.class("focus:outline focus:outline-purple-600")
-        _ -> a.class("outline outline-red-500")
+        [] -> a.class("focus:outline " <> colors.focus_outline_purple_600)
+        _ -> a.class("outline " <> colors.outline_red_500)
       },
       a.id(name),
       a.name(name),
       a.value(form.field_value(form, name)),
     ]),
     ..list.map(errors, fn(error_message) {
-      h.p([a.class("mt-0.5 text-xs text-red-500")], [
+      h.p([a.class("mt-0.5 text-xs " <> colors.text_red_500)], [
         h.text(error_message),
       ])
     })

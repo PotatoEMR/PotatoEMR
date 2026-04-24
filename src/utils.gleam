@@ -15,6 +15,7 @@ import gleam/time/timestamp
 import lustre/attribute as a
 import lustre/element
 import lustre/element/html as h
+import colors
 
 pub fn err_to_string(err: r4us_rsvp.Err) {
   case err {
@@ -235,7 +236,7 @@ pub fn th(s) {
 }
 
 pub fn th_bordered(s) {
-  h.th([a.class("p-2 text-left border border-slate-700")], [h.text(s)])
+  h.th([a.class("p-2 text-left border " <> colors.border_slate_700)], [h.text(s)])
 }
 
 pub fn th_list(s) {
