@@ -248,7 +248,7 @@ fn set_search_visible(model: Model, visible: Bool) {
 
 // VIEW ------------------------------------------------------------------------
 
-const nav_bar_class = "flex flex-nowrap overflow-x-auto items-end space-x-1 px-2 min-h-10 " <> colors.bg_slate_800 <> " border-b " <> colors.border_slate_700
+const nav_bar_class = "flex flex-wrap items-end space-x-1 px-2 min-h-10 " <> colors.bg_slate_800 <> " border-b " <> colors.border_slate_700
 
 fn view(model: Model) -> Element(Msg) {
   h.div([a.class("w-full h-dvh flex flex-col " <> colors.bg_slate_900 <> " " <> colors.text_white)], [
@@ -561,7 +561,7 @@ fn view(model: Model) -> Element(Msg) {
             ),
             h.div([a.class("flex-1 flex flex-col min-h-0 min-w-0")], [
               h.ul(
-                [a.class(nav_bar_class)],
+                [a.class(nav_bar_class <> " overflow-x-auto")],
                 mm.pages_patient
                   |> list.filter(fn(x) {
                     case x.1 {
