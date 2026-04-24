@@ -19,7 +19,7 @@ import lustre/event
 import model_msgs.{type Model, Model} as mm
 import utils
 
-const vital_columns: List(#(String, String, String)) = [
+pub const vital_columns: List(#(String, String, String)) = [
   #("8867-4", "Heart Rate (/min)", "heart_rate"),
   #("9279-1", "Resp Rate (/min)", "respiratory_rate"),
   #("2708-6", "O2 Sat (%)", "oxygen_saturation"),
@@ -47,20 +47,20 @@ const header_time_column_style = "width: 13rem; min-width: 13rem; max-width: 13r
 
 const header_time_column_inner_style = "width: 13rem; min-width: 13rem; max-width: 13rem; min-height: 4.5rem; max-height: 4.5rem; padding: 0.5rem; box-sizing: border-box; overflow: hidden;"
 
-fn is_vital_signs(obs: r4us.Observation) -> Bool {
+pub fn is_vital_signs(obs: r4us.Observation) -> Bool {
   list.any(obs.category, fn(cat) {
     list.any(cat.coding, fn(c) { c.code == Some("vital-signs") })
   })
 }
 
-fn obs_code(obs: r4us.Observation) -> String {
+pub fn obs_code(obs: r4us.Observation) -> String {
   case obs.code.coding {
     [] -> ""
     [first, ..] -> option.unwrap(first.code, "")
   }
 }
 
-fn obs_time(obs: r4us.Observation) -> String {
+pub fn obs_time(obs: r4us.Observation) -> String {
   let raw = case obs.effective {
     Some(r4us.ObservationEffectiveDatetime(effective: dt)) ->
       primitive_types.datetime_to_string(dt)
@@ -223,7 +223,7 @@ fn bp_value_string(obs: r4us.Observation) -> String {
   sys <> "/" <> dia
 }
 
-fn cell_value(obs: r4us.Observation, code: String) -> String {
+pub fn cell_value(obs: r4us.Observation, code: String) -> String {
   case code {
     "85354-9" -> bp_value_string(obs)
     _ -> obs_value_string(obs)
