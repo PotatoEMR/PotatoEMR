@@ -246,15 +246,15 @@ fn set_search_visible(model: Model, visible: Bool) {
 
 // VIEW ------------------------------------------------------------------------
 
-const nav_bar_class = "flex items-end space-x-1 px-2 h-10 bg-slate-800 border-b border-slate-700"
+const nav_bar_class = "flex flex-wrap items-end space-x-1 px-2 min-h-10 bg-slate-800 border-b border-slate-700"
 
 fn view(model: Model) -> Element(Msg) {
-  h.div([a.class("w-full h-screen flex flex-col bg-slate-900 text-white")], [
+  h.div([a.class("w-full h-dvh flex flex-col bg-slate-900 text-white")], [
     h.nav([a.class(nav_bar_class)], [
       h.div([a.class("relative")], [
         h.input([
           a.class(
-            "w-lg h-8 m-1 pl-4 rounded-full border border-slate-700 bg-slate-950 focus:outline focus:outline-purple-600",
+            "w-lg max-w-[calc(100vw-2rem)] h-8 m-1 pl-4 rounded-full border border-slate-700 bg-slate-950 focus:outline focus:outline-purple-600",
           ),
           a.placeholder("⌕ search patient name"),
           event.on_focus(mm.UserFocusedSearch),
@@ -267,7 +267,7 @@ fn view(model: Model) -> Element(Msg) {
             h.div(
               [
                 a.class(
-                  "absolute top-full left-0 -mt-1 bg-slate-800 border border-slate-700 w-3xl h-120 overflow-auto z-50",
+                  "absolute top-full left-0 -mt-1 bg-slate-800 border border-slate-700 w-3xl max-w-[calc(100vw-1rem)] h-120 max-h-[calc(100dvh-4rem)] overflow-auto z-50",
                 ),
                 event.prevent_default(event.on_mouse_down(mm.UserFocusedSearch)),
               ],
@@ -365,11 +365,11 @@ fn view(model: Model) -> Element(Msg) {
             mm.NotFound(not_found) -> notfound.view(not_found)
           })
         mm.RoutePatient(id:, patient:, page:) ->
-          h.main([a.class("flex flex-1 min-h-0")], [
+          h.main([a.class("flex flex-col md:flex-row flex-1 min-h-0")], [
             h.nav(
               [
                 a.class(
-                  "w-56 shrink-0 bg-slate-800 border-r border-slate-700 flex flex-col items-center p-2",
+                  "w-full md:w-56 shrink-0 bg-slate-800 border-b md:border-b-0 md:border-r border-slate-700 flex flex-row md:flex-col items-center gap-2 md:gap-0 p-2",
                 ),
               ],
               case patient {
