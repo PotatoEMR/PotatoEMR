@@ -248,7 +248,7 @@ fn set_search_visible(model: Model, visible: Bool) {
 
 // VIEW ------------------------------------------------------------------------
 
-const nav_bar_class = "flex flex-wrap items-end space-x-1 px-2 min-h-10 " <> colors.bg_slate_800 <> " border-b " <> colors.border_slate_700
+const nav_bar_class = "flex flex-nowrap overflow-x-auto items-end space-x-1 px-2 min-h-10 " <> colors.bg_slate_800 <> " border-b " <> colors.border_slate_700
 
 fn view(model: Model) -> Element(Msg) {
   h.div([a.class("w-full h-dvh flex flex-col " <> colors.bg_slate_900 <> " " <> colors.text_white)], [
