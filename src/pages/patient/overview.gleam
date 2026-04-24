@@ -104,7 +104,7 @@ fn demographics_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientDemographics(mm.FormStateNone),
     "Demographics",
-    "border-blue-500",
+    "border-[#1e66f5]",
     None,
     [
       h.p([a.class("font-bold text-base")], [h.text(name)]),
@@ -142,7 +142,7 @@ fn allergies_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientAllergies(mm.FormStateNone),
     "Allergies",
-    "border-red-500",
+    "border-[#d20f39]",
     None,
     body,
   )
@@ -175,7 +175,7 @@ fn encounters_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientEncounters(mm.FormStateNone),
     "Encounters",
-    "border-purple-500",
+    "border-[#8839ef]",
     None,
     body,
   )
@@ -205,7 +205,7 @@ fn immunizations_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientImmunizations(mm.FormStateNone),
     "Immunizations",
-    "border-green-500",
+    "border-[#40a02b]",
     None,
     body,
   )
@@ -233,7 +233,7 @@ fn medications_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientMedications(mm.FormStateNone),
     "Medications",
-    "border-amber-500",
+    "border-[#fe640b]",
     Some(list.length(meds)),
     body,
   )
@@ -261,7 +261,7 @@ fn orders_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientOrders(mm.FormStateNone),
     "Orders",
-    "border-cyan-500",
+    "border-[#04a5e5]",
     Some(list.length(orders)),
     body,
   )
@@ -315,7 +315,7 @@ fn vitals_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientVitals(mm.FormStateNone),
     "Vitals",
-    "border-pink-500",
+    "border-[#ea76cb]",
     None,
     body,
   )
