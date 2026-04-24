@@ -1,4 +1,5 @@
 import fhir/primitive_types
+import fhir/r4us
 import fhir/r4us_rsvp
 import fhir/r4us_sansio
 import fhir/r4us_valuesets
@@ -387,6 +388,129 @@ fn view(model: Model) -> Element(Msg) {
                     |> utils.view_patient_photo_box(None)
                   // view_patient_photo_box takes Msg to run on click
                   // but here we navigate with href/modem instead, and pass None in for msg
+                  let recorded_gender = case
+                    data.patient.individual_recorded_sex_or_gender
+                  {
+                    [first, ..] -> utils.codeableconcept_to_string(first.value)
+                    [] -> ""
+                  }
+                  let gender = case recorded_gender {
+                    "" ->
+                      case data.patient.gender {
+                        Some(g) ->
+                          r4us_valuesets.administrativegender_to_string(g)
+                        None -> ""
+                      }
+                    s -> s
+                  }
+                  let birth_date = case data.patient.birth_date {
+                    Some(bd) -> primitive_types.date_to_string(bd)
+                    None -> ""
+                  }
+                  let pcp = case data.patient.general_practitioner {
+                    [] -> ""
+                    [first, ..] ->
+                      case first.display {
+                        Some(s) -> s
+                        None -> option.unwrap(first.reference, "")
+                      }
+                  }
+                  let encounter_start_key = fn(enc: r4us.Encounter) {
+                    case enc.period {
+                      Some(p) ->
+                        case p.start {
+                          Some(d) -> primitive_types.datetime_to_string(d)
+                          None -> ""
+                        }
+                      None -> ""
+                    }
+                  }
+                  let attending = case
+                    data.patient_encounters
+                    |> list.sort(fn(a, b) {
+                      string.compare(
+                        encounter_start_key(b),
+                        encounter_start_key(a),
+                      )
+                    })
+                  {
+                    [] -> ""
+                    [enc, ..] ->
+                      list.find_map(enc.participant, fn(p) {
+                        case p.individual {
+                          Some(ref) ->
+                            case option.unwrap(ref.reference, "") {
+                              "Practitioner/" <> _ ->
+                                Ok(option.unwrap(
+                                  ref.display,
+                                  option.unwrap(ref.reference, ""),
+                                ))
+                              _ -> Error(Nil)
+                            }
+                          None -> Error(Nil)
+                        }
+                      })
+                      |> result.unwrap("")
+                  }
+                  let #(allergies_label, allergies_list) = case
+                    data.patient_allergies
+                  {
+                    [] -> #("No Known Allergies", element.none())
+                    allergies -> #(
+                      "Allergies",
+                      h.ul(
+                        [a.class("text-slate-400 list-disc pl-5")],
+                        list.map(allergies, fn(al) {
+                          let name = case al.code {
+                            None -> "unspecified"
+                            Some(cc) -> utils.codeableconcept_to_string(cc)
+                          }
+                          h.li([], [h.text(name)])
+                        }),
+                      ),
+                    )
+                  }
+                  let allergies_section =
+                    h.div(
+                      [a.class("hidden md:flex flex-col w-full mt-3 text-sm")],
+                      [
+                        h.div([a.class("font-semibold text-slate-300")], [
+                          h.text(allergies_label),
+                        ]),
+                        allergies_list,
+                      ],
+                    )
+                  let #(meds_label, meds_list) = case
+                    data.patient_medication_statements
+                  {
+                    [] -> #("No Known Medications", element.none())
+                    meds -> #(
+                      "Medications",
+                      h.ul(
+                        [a.class("text-slate-400 list-disc pl-5")],
+                        list.map(meds, fn(ms) {
+                          let name = case ms.medication {
+                            r4us.MedicationstatementMedicationCodeableconcept(
+                              cc,
+                            ) -> utils.codeableconcept_to_string(cc)
+                            r4us.MedicationstatementMedicationReference(ref) ->
+                              option.unwrap(ref.display, "")
+                          }
+                          h.li([], [h.text(name)])
+                        }),
+                      ),
+                    )
+                  }
+                  let medications_section =
+                    h.div(
+                      [a.class("hidden md:flex flex-col w-full mt-3 text-sm")],
+                      [
+                        h.div([a.class("font-semibold text-slate-300")], [
+                          h.text(meds_label),
+                        ]),
+                        meds_list,
+                      ],
+                    )
                   [
                     h.a(
                       [
@@ -398,10 +522,38 @@ fn view(model: Model) -> Element(Msg) {
                       ],
                       [photo],
                     ),
-                    h.text(
-                      patient.data.patient.name
-                      |> utils.humannames_to_single_name_string,
-                    ),
+                    h.div([a.class("font-semibold text-center")], [
+                      h.text(
+                        patient.data.patient.name
+                        |> utils.humannames_to_single_name_string,
+                      ),
+                    ]),
+                    case gender {
+                      "" -> element.none()
+                      s ->
+                        h.div([a.class("text-sm text-slate-400")], [h.text(s)])
+                    },
+                    case birth_date {
+                      "" -> element.none()
+                      s ->
+                        h.div([a.class("text-sm text-slate-400")], [h.text(s)])
+                    },
+                    case pcp {
+                      "" -> element.none()
+                      s ->
+                        h.div([a.class("text-sm text-slate-400")], [
+                          h.text("PCP: " <> s),
+                        ])
+                    },
+                    case attending {
+                      "" -> element.none()
+                      s ->
+                        h.div([a.class("text-sm text-slate-400")], [
+                          h.text("Attending: " <> s),
+                        ])
+                    },
+                    allergies_section,
+                    medications_section,
                   ]
                 }
               },
