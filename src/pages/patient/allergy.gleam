@@ -1,6 +1,7 @@
 import components.{
-  CodingOption, btn, btn_cancel, btn_nomsg, view_form_coding_select,
-  view_form_input, view_form_select, view_form_textarea,
+  CodingOption, btn, btn_cancel, btn_nomsg, data_table, data_table_row,
+  form_fieldset_class, view_form_coding_select, view_form_input,
+  view_form_select, view_form_textarea,
 }
 import fhir/primitive_types
 import fhir/r4us
@@ -400,7 +401,7 @@ pub fn view(
       case allergy.id {
         None -> element.none()
         Some(allergy_id) ->
-          h.tr([a.class("border-b " <> colors.border_slate_700)], [
+          data_table_row([
             h.td([a.class("p-2")], [
               case allergy.code {
                 None -> element.none()
@@ -457,10 +458,7 @@ pub fn view(
           on_click: mm.UserClickedCreateAllergy,
         ),
       ]),
-      h.table([a.class("border-collapse border " <> colors.border_slate_700)], [
-        h.thead([], [head]),
-        h.tbody([], rows),
-      ]),
+      data_table(head: head, rows: rows),
       case allergy_form {
         mm.FormStateNone -> element.none()
         mm.FormStateLoading -> h.p([], [h.text("loading...")])
@@ -491,11 +489,11 @@ pub fn view(
               h.fieldset(
                 [
                   a.class(
-                    "border " <> colors.border_slate_700 <> " rounded-lg p-4 flex flex-row flex-wrap gap-4",
+                    form_fieldset_class(),
                   ),
                 ],
                 [
-                  h.legend([a.class("px-2 text-sm font-bold " <> colors.text_slate_200)], [
+                  h.legend([a.class("px-2 text-sm font-bold " <> colors.text)], [
                     h.text(legend_text),
                   ]),
                   view_form_coding_select(

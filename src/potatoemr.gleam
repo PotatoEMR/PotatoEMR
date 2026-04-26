@@ -248,15 +248,15 @@ fn set_search_visible(model: Model, visible: Bool) {
 
 // VIEW ------------------------------------------------------------------------
 
-const nav_bar_class = "flex flex-wrap items-end space-x-1 px-2 min-h-10 " <> colors.bg_slate_800 <> " border-b " <> colors.border_slate_700
+const nav_bar_class = "flex flex-wrap items-end space-x-1 px-2 min-h-10 " <> colors.bg_base <> " border-b " <> colors.border_surface_0
 
 fn view(model: Model) -> Element(Msg) {
-  h.div([a.class("w-full h-dvh flex flex-col " <> colors.bg_slate_900 <> " " <> colors.text_white)], [
+  h.div([a.class("w-full h-dvh flex flex-col " <> colors.bg_mantle <> " " <> colors.text)], [
     h.nav([a.class(nav_bar_class)], [
       h.div([a.class("relative")], [
         h.input([
           a.class(
-            "w-lg max-w-[calc(100vw-2rem)] h-8 m-1 pl-4 rounded-full border " <> colors.border_slate_700 <> " " <> colors.bg_slate_950 <> " focus:outline " <> colors.focus_outline_purple_600,
+            "w-lg max-w-[calc(100vw-2rem)] h-8 m-1 pl-4 rounded-full border " <> colors.border_surface_0 <> " " <> colors.bg_crust <> " focus:outline " <> colors.focus_outline_mauve,
           ),
           a.placeholder("⌕ search patient name"),
           event.on_focus(mm.UserFocusedSearch),
@@ -269,13 +269,13 @@ fn view(model: Model) -> Element(Msg) {
             h.div(
               [
                 a.class(
-                  "absolute top-full left-0 -mt-1 " <> colors.bg_slate_800 <> " border " <> colors.border_slate_700 <> " w-3xl max-w-[calc(100vw-1rem)] h-120 max-h-[calc(100dvh-4rem)] overflow-auto z-50",
+                  "absolute top-full left-0 -mt-1 " <> colors.bg_base <> " border " <> colors.border_surface_0 <> " w-3xl max-w-[calc(100vw-1rem)] h-120 max-h-[calc(100dvh-4rem)] overflow-auto z-50",
                 ),
                 event.prevent_default(event.on_mouse_down(mm.UserFocusedSearch)),
               ],
               case model.search.results {
                 mm.SearchPatientResultsErrMsg(err_msg:) -> [
-                  h.p([a.class(colors.text_red_300)], [h.text(err_msg)]),
+                  h.p([a.class(colors.text_red_500_error)], [h.text(err_msg)]),
                 ]
                 mm.SearchPatientResultsLoadingMsg -> [h.text("loading...")]
                 mm.SearchPatientResultsEmptyMsg -> [h.text("type name to search patient by name")]
@@ -318,7 +318,7 @@ fn view(model: Model) -> Element(Msg) {
                                   mm.PatientOverview,
                                 )),
                                 a.class(
-                                  "flex items-center gap-3 p-4 " <> colors.hover_bg_slate_900,
+                                  "flex items-center gap-3 p-4 " <> colors.hover_bg_mantle,
                                 ),
                               ],
                               [
@@ -330,7 +330,7 @@ fn view(model: Model) -> Element(Msg) {
                                   h.p([a.class("font-bold")], [
                                     h.text(name),
                                   ]),
-                                  h.p([a.class("text-sm " <> colors.text_slate_400)], [
+                                  h.p([a.class("text-sm " <> colors.subtext_1)], [
                                     h.text(detail),
                                   ]),
                                 ]),
@@ -371,7 +371,7 @@ fn view(model: Model) -> Element(Msg) {
             h.nav(
               [
                 a.class(
-                  "w-full md:w-56 shrink-0 " <> colors.bg_slate_800 <> " border-b md:border-b-0 md:border-r " <> colors.border_slate_700 <> " flex flex-row md:flex-col items-center gap-2 md:gap-0 p-2",
+                  "w-full md:w-56 shrink-0 " <> colors.bg_base <> " border-b md:border-b-0 md:border-r " <> colors.border_surface_0 <> " flex flex-row md:flex-col items-center gap-2 md:gap-0 p-2",
                 ),
               ],
               case patient {
@@ -460,7 +460,7 @@ fn view(model: Model) -> Element(Msg) {
                     allergies -> #(
                       "Allergies",
                       h.ul(
-                        [a.class(colors.text_slate_400 <> " list-disc pl-5")],
+                        [a.class(colors.subtext_1 <> " list-disc pl-5")],
                         list.map(allergies, fn(al) {
                           let name = case al.code {
                             None -> "unspecified"
@@ -475,7 +475,7 @@ fn view(model: Model) -> Element(Msg) {
                     h.div(
                       [a.class("hidden md:flex flex-col w-full mt-3 text-sm")],
                       [
-                        h.div([a.class("font-semibold " <> colors.text_slate_300)], [
+                        h.div([a.class("font-semibold " <> colors.text)], [
                           h.text(allergies_label),
                         ]),
                         allergies_list,
@@ -488,7 +488,7 @@ fn view(model: Model) -> Element(Msg) {
                     meds -> #(
                       "Medications",
                       h.ul(
-                        [a.class(colors.text_slate_400 <> " list-disc pl-5")],
+                        [a.class(colors.subtext_1 <> " list-disc pl-5")],
                         list.map(meds, fn(ms) {
                           let name = case ms.medication {
                             r4us.MedicationstatementMedicationCodeableconcept(
@@ -506,7 +506,7 @@ fn view(model: Model) -> Element(Msg) {
                     h.div(
                       [a.class("hidden md:flex flex-col w-full mt-3 text-sm")],
                       [
-                        h.div([a.class("font-semibold " <> colors.text_slate_300)], [
+                        h.div([a.class("font-semibold " <> colors.text)], [
                           h.text(meds_label),
                         ]),
                         meds_list,
@@ -532,24 +532,24 @@ fn view(model: Model) -> Element(Msg) {
                     case gender {
                       "" -> element.none()
                       s ->
-                        h.div([a.class("text-sm " <> colors.text_slate_400)], [h.text(s)])
+                        h.div([a.class("text-sm " <> colors.subtext_1)], [h.text(s)])
                     },
                     case birth_date {
                       "" -> element.none()
                       s ->
-                        h.div([a.class("text-sm " <> colors.text_slate_400)], [h.text(s)])
+                        h.div([a.class("text-sm " <> colors.subtext_1)], [h.text(s)])
                     },
                     case pcp {
                       "" -> element.none()
                       s ->
-                        h.div([a.class("text-sm " <> colors.text_slate_400)], [
+                        h.div([a.class("text-sm " <> colors.subtext_1)], [
                           h.text("PCP: " <> s),
                         ])
                     },
                     case attending {
                       "" -> element.none()
                       s ->
-                        h.div([a.class("text-sm " <> colors.text_slate_400)], [
+                        h.div([a.class("text-sm " <> colors.subtext_1)], [
                           h.text("Attending: " <> s),
                         ])
                     },
@@ -645,8 +645,8 @@ fn view_header_link(
             "flex items-center px-3 py-1 rounded-t-2xl border-x border-t underline",
             True,
           ),
-          #(colors.hover_text_slate_300 <> " " <> colors.border_transparent, !active),
-          #(colors.bg_0f172b <> " " <> colors.border_slate_700, active),
+          #(colors.hover_text <> " " <> colors.border_transparent, !active),
+          #(colors.bg_mantle <> " " <> colors.border_surface_0, active),
         ]),
       ],
       [h.text(text)],

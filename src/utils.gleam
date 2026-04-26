@@ -236,7 +236,7 @@ pub fn th(s) {
 }
 
 pub fn th_bordered(s) {
-  h.th([a.class("p-2 text-left border " <> colors.border_slate_700)], [h.text(s)])
+  h.th([a.class("p-2 text-left border " <> colors.border_surface_0)], [h.text(s)])
 }
 
 pub fn th_list(s) {

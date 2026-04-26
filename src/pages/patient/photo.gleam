@@ -1,3 +1,5 @@
+import colors
+import components.{btn_attrs}
 import fhir/r4us
 import fhir/r4us_rsvp
 import gleam/dynamic
@@ -13,7 +15,6 @@ import lustre/event
 import model_msgs.{type Model, Model} as mm
 import utils
 import utils2
-import colors
 
 pub fn update(msg, model) {
   case msg {
@@ -178,9 +179,15 @@ pub fn view(model: Model, data: mm.PatientData) {
     })
   let dropzone_class = case model.dragging_photo {
     True ->
-      "border-2 border-dashed " <> colors.border_blue_500 <> " " <> colors.bg_blue_50 <> " rounded-lg p-6 text-center transition-colors"
+      "border-2 border-dashed "
+      <> colors.border_surface_0
+      <> " "
+      <> colors.bg_surface_0
+      <> " rounded-lg p-6 text-center transition-colors"
     False ->
-      "border-2 border-dashed " <> colors.border_gray_300 <> " rounded-lg p-6 text-center transition-colors"
+      "border-2 border-dashed "
+      <> colors.border_surface_0
+      <> " rounded-lg p-6 text-center transition-colors"
   }
   [
     h.div([a.class("min-h-full")], [
@@ -189,9 +196,7 @@ pub fn view(model: Model, data: mm.PatientData) {
           Some(err) ->
             h.div(
               [
-                a.class(
-                  "mb-4 rounded border " <> colors.border_red_700 <> " " <> colors.bg_red_950 <> " px-3 py-2 text-sm " <> colors.text_red_100,
-                ),
+                a.class("px-3 py-2 text-sm " <> colors.text_red_500_error),
               ],
               [h.text("Server error: " <> utils.err_to_string(err))],
             )
@@ -199,23 +204,16 @@ pub fn view(model: Model, data: mm.PatientData) {
         },
         h.div([a.class(dropzone_class)], [
           h.h3([a.class("text-lg mb-2")], [h.text("Upload Photo")]),
-          h.label(
-            [
-              a.class(
-                "inline-flex items-center gap-2 px-4 py-2 " <> colors.bg_blue_600 <> " " <> colors.text_white <> " font-medium rounded cursor-pointer " <> colors.hover_bg_blue_700 <> " " <> colors.active_bg_blue_800 <> " transition-colors",
-              ),
-            ],
-            [
-              h.text("Choose File"),
-              h.input([
-                a.type_("file"),
-                a.attribute("accept", "image/*"),
-                a.class("hidden"),
-                on_file_input(mm.UserSelectedPhotoEvent),
-              ]),
-            ],
-          ),
-          h.p([a.class("mt-2 text-sm " <> colors.text_gray_500)], [
+          h.label(btn_attrs(), [
+            h.text("Choose File"),
+            h.input([
+              a.type_("file"),
+              a.attribute("accept", "image/*"),
+              a.class("hidden"),
+              on_file_input(mm.UserSelectedPhotoEvent),
+            ]),
+          ]),
+          h.p([a.class("mt-2 text-sm " <> colors.subtext_1)], [
             h.text("or drag and drop an image anywhere on this page"),
           ]),
         ]),

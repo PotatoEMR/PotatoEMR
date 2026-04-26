@@ -46,9 +46,9 @@ fn box(
     [
       mm.href(mm.RoutePatient(id, mm.PatientLoadStillLoading, page)),
       a.class(
-        "break-inside-avoid mb-4 block rounded-lg overflow-hidden " <> colors.bg_slate_800 <> " border-l-4 "
+        "break-inside-avoid mb-4 block rounded-lg overflow-hidden " <> colors.bg_base <> " border-l-4 "
         <> bar_color
-        <> " " <> colors.hover_bg_slate_700 <> " transition-colors",
+        <> " " <> colors.hover_bg_surface_0 <> " transition-colors",
       ),
     ],
     [
@@ -56,14 +56,14 @@ fn box(
         h.div(
           [
             a.class(
-              "flex items-baseline justify-between border-b " <> colors.border_slate_700 <> " pb-1",
+              "flex items-baseline justify-between border-b " <> colors.border_surface_0 <> " pb-1",
             ),
           ],
           [
             h.p(
               [
                 a.class(
-                  "text-sm font-semibold " <> colors.text_slate_300 <> " uppercase tracking-wide",
+                  "text-sm font-semibold " <> colors.text <> " uppercase tracking-wide",
                 ),
               ],
               [h.text(label)],
@@ -71,20 +71,20 @@ fn box(
             case count {
               None -> element.none()
               Some(n) ->
-                h.p([a.class("text-xs " <> colors.text_slate_500)], [
+                h.p([a.class("text-xs " <> colors.subtext_1)], [
                   h.text(int.to_string(n)),
                 ])
             },
           ],
         ),
-        h.div([a.class("text-sm " <> colors.text_slate_200 <> " flex flex-col gap-1")], body),
+        h.div([a.class("text-sm " <> colors.text <> " flex flex-col gap-1")], body),
       ]),
     ],
   )
 }
 
 fn empty_line(text: String) -> Element(msg) {
-  h.p([a.class(colors.text_slate_500 <> " italic")], [h.text(text)])
+  h.p([a.class(colors.subtext_1 <> " italic")], [h.text(text)])
 }
 
 fn demographics_box(id: String, data: mm.PatientData) -> Element(msg) {
@@ -105,15 +105,15 @@ fn demographics_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientDemographics(mm.FormStateNone),
     "Demographics",
-    colors.border_1e66f5,
+    colors.border_blue,
     None,
     [
       h.p([a.class("font-bold text-base")], [h.text(name)]),
-      h.p([a.class(colors.text_slate_400)], [h.text("Gender: " <> gender)]),
-      h.p([a.class(colors.text_slate_400)], [h.text("DOB: " <> dob)]),
+      h.p([a.class(colors.subtext_1)], [h.text("Gender: " <> gender)]),
+      h.p([a.class(colors.subtext_1)], [h.text("DOB: " <> dob)]),
       case identifier {
         "" -> element.none()
-        s -> h.p([a.class(colors.text_slate_400)], [h.text("ID: " <> s)])
+        s -> h.p([a.class(colors.subtext_1)], [h.text("ID: " <> s)])
       },
     ],
   )
@@ -143,7 +143,7 @@ fn allergies_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientAllergies(mm.FormStateNone),
     "Allergies",
-    colors.border_d20f39,
+    colors.border_flamingo,
     None,
     body,
   )
@@ -176,7 +176,7 @@ fn encounters_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientEncounters(mm.FormStateNone),
     "Encounters",
-    colors.border_8839ef,
+    colors.border_mauve,
     None,
     body,
   )
@@ -206,7 +206,7 @@ fn immunizations_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientImmunizations(mm.FormStateNone),
     "Immunizations",
-    colors.border_40a02b,
+    colors.border_green,
     None,
     body,
   )
@@ -234,7 +234,7 @@ fn medications_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientMedications(mm.FormStateNone),
     "Medications",
-    colors.border_fe640b,
+    colors.border_peach,
     Some(list.length(meds)),
     body,
   )
@@ -262,7 +262,7 @@ fn orders_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientOrders(mm.FormStateNone),
     "Orders",
-    colors.border_04a5e5,
+    colors.border_sky,
     Some(list.length(orders)),
     body,
   )
@@ -301,9 +301,9 @@ fn vitals_box(id: String, data: mm.PatientData) -> Element(msg) {
           [],
           list.map(latest, fn(row) {
             h.tr([], [
-              h.td([a.class(colors.text_slate_400 <> " pr-3 py-0.5")], [h.text(row.0)]),
+              h.td([a.class(colors.subtext_1 <> " pr-3 py-0.5")], [h.text(row.0)]),
               h.td([a.class("pr-3 py-0.5")], [h.text(row.1)]),
-              h.td([a.class(colors.text_slate_500 <> " text-xs py-0.5")], [
+              h.td([a.class(colors.subtext_1 <> " text-xs py-0.5")], [
                 h.text(row.2),
               ]),
             ])
@@ -316,7 +316,7 @@ fn vitals_box(id: String, data: mm.PatientData) -> Element(msg) {
     id,
     mm.PatientVitals(mm.FormStateNone),
     "Vitals",
-    colors.border_ea76cb,
+    colors.border_pink,
     None,
     body,
   )

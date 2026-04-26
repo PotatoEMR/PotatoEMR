@@ -1,6 +1,8 @@
+import colors
 import components.{
-  CodingOption, btn, btn_cancel, btn_nomsg, view_form_coding_select,
-  view_form_input, view_form_select, view_form_textarea,
+  CodingOption, btn, btn_cancel, btn_nomsg, data_table, data_table_row,
+  form_fieldset_class, view_form_coding_select, view_form_input,
+  view_form_select, view_form_textarea,
 }
 import fhir/primitive_types
 import fhir/r4us
@@ -19,7 +21,6 @@ import lustre/event
 import model_msgs.{type Model, Model} as mm
 import terminology/vaccinecodes
 import utils
-import colors
 
 pub fn update(msg, model) {
   case msg {
@@ -407,7 +408,7 @@ pub fn view(
         "",
       ]),
     )
-  let spacer = [h.tr([a.class("border-b-4 " <> colors.border_slate_600)], [])]
+  let spacer = [h.tr([a.class("border-b-4 " <> colors.border_surface_0)], [])]
   let grouped_rows =
     pat.patient_immunizations
     |> list.group(fn(imm) {
@@ -423,7 +424,7 @@ pub fn view(
         case imm.id {
           None -> element.none()
           Some(imm_id) ->
-            h.tr([a.class("border-b " <> colors.border_slate_700)], [
+            data_table_row([
               h.td([a.class("p-2")], [
                 h.text(utils.codeableconcept_to_string(imm.vaccine_code)),
               ]),
@@ -504,11 +505,11 @@ pub fn view(
               h.fieldset(
                 [
                   a.class(
-                    "border " <> colors.border_slate_700 <> " rounded-lg p-4 flex flex-row flex-wrap gap-4",
+                    form_fieldset_class()
                   ),
                 ],
                 [
-                  h.legend([a.class("px-2 text-sm font-bold " <> colors.text_slate_200)], [
+                  h.legend([a.class("px-2 text-sm font-bold " <> colors.text)], [
                     h.text(legend_text),
                   ]),
                   view_form_coding_select(
@@ -569,10 +570,7 @@ pub fn view(
         }
       },
       h.div([a.class("overflow-auto flex-1 min-h-0")], [
-        h.table([a.class("border-collapse border " <> colors.border_slate_700 <> " w-full")], [
-          h.thead([], [head]),
-          h.tbody([], grouped_rows),
-        ]),
+        data_table(head: head, rows: grouped_rows),
       ]),
     ]),
   ]
