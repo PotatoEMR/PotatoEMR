@@ -20,6 +20,9 @@ pub fn update(msg, model) {
   case msg {
     mm.ServerUpdatedPatientPhoto(Error(err)) -> photo_error(model, err)
     mm.ServerUpdatedPatientPhoto(Ok(patient)) -> server_updated(model, patient)
+    mm.ServerReReadPatientWithPhotoErr(Ok(patient)) ->
+      server_updated(model, patient)
+    mm.ServerReReadPatientWithPhotoErr(Error(_)) -> #(model, effect.none())
     mm.UserDraggingPhoto(dragging_photo) ->
       set_drag_photo(model, dragging_photo)
     mm.UserSelectedPhotoEvent(event) -> select_photo(model, event)
@@ -150,12 +153,32 @@ pub fn set_existing(model: Model, num: Int) {
 
 fn photo_error(model: Model, err: r4us_rsvp.Err) {
   case model.route {
-    mm.RoutePatient(id:, patient:, page: mm.PatientPhotos(_)) -> #(
-      Model(
-        ..model,
-        route: mm.RoutePatient(id:, patient:, page: mm.PatientPhotos(Some(err))),
+    mm.RoutePatient(id:, patient:, page: mm.PatientPhotos(_)) -> {
+      let reread =
+        r4us_rsvp.patient_read(
+          id,
+          model.client,
+          mm.ServerReReadPatientWithPhotoErr,
+        )
+      #(
+        Model(
+          ..model,
+          route: mm.RoutePatient(
+            id:,
+            patient:,
+            page: mm.PatientPhotos(Some(err)),
+          ),
+        ),
+        reread,
+      )
+    }
+    mm.RoutePatient(id:, ..) -> #(
+      model,
+      r4us_rsvp.patient_read(
+        id,
+        model.client,
+        mm.ServerReReadPatientWithPhotoErr,
       ),
-      effect.none(),
     )
     _ -> #(model, effect.none())
   }

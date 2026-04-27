@@ -201,6 +201,7 @@ pub type SubmsgRegisterPatient {
 
 pub type SubmsgPhoto {
   ServerUpdatedPatientPhoto(Result(r4us.Patient, r4us_rsvp.Err))
+  ServerReReadPatientWithPhotoErr(Result(r4us.Patient, r4us_rsvp.Err))
   UserSelectedPhotoEvent(dynamic.Dynamic)
   UserSelectedPhotoDataUrl(String)
   UserDraggingPhoto(Bool)

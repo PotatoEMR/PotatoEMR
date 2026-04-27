@@ -15,6 +15,7 @@ import gleam/time/timestamp
 import lustre/attribute as a
 import lustre/element
 import lustre/element/html as h
+import rsvp
 import colors
 
 pub fn err_to_string(err: r4us_rsvp.Err) {
@@ -24,8 +25,43 @@ pub fn err_to_string(err: r4us_rsvp.Err) {
   }
 }
 
-pub fn rsvp_err_to_string(_err) -> String {
-  "http request error"
+pub fn rsvp_err_to_string(err: rsvp.Error) -> String {
+  case err {
+    rsvp.BadUrl(url) -> "bad url: " <> url
+    rsvp.BadBody -> "could not read response body"
+    rsvp.NetworkError -> "network error (could not reach server)"
+    rsvp.HttpError(resp) ->
+      "http "
+      <> int.to_string(resp.status)
+      <> case resp.body {
+        "" -> ""
+        body -> ": " <> body
+      }
+    rsvp.UnhandledResponse(resp) ->
+      "unexpected response: http "
+      <> int.to_string(resp.status)
+      <> case resp.body {
+        "" -> ""
+        body -> " " <> body
+      }
+    rsvp.JsonError(dec_err) ->
+      "json decode error: "
+      <> case dec_err {
+        json.UnexpectedEndOfInput -> "unexpected end of input"
+        json.UnexpectedByte(byte) -> "unexpected byte " <> byte
+        json.UnexpectedSequence(seq) -> "unexpected sequence " <> seq
+        json.UnableToDecode(errs) ->
+          list.map(errs, fn(e) {
+            "expected "
+            <> e.expected
+            <> " but got "
+            <> e.found
+            <> " at "
+            <> string.join(e.path, ".")
+          })
+          |> string.join(", ")
+      }
+  }
 }
 
 pub fn sansio_err_to_string(err: r4us_sansio.ErrResp) {
