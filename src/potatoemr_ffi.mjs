@@ -1,3 +1,11 @@
+export function get_item(key) {
+  return localStorage.getItem(key) ?? "";
+}
+
+export function set_item(key, value) {
+  localStorage.setItem(key, value);
+}
+
 export function read_file_from_event(event, callback) {
   const file = event.target?.files?.[0] || event.dataTransfer?.files?.[0];
   if (!file) return;

@@ -6,6 +6,7 @@ import lustre/effect
 import lustre/element/html as h
 import lustre/event
 import model_msgs.{type Model, Model} as mm
+import utils2
 
 pub fn update(msg, model) {
   case msg {
@@ -16,7 +17,10 @@ pub fn update(msg, model) {
 pub fn switch_client(model: Model, baseurl: String) {
   let client = r4us_rsvp.fhirclient_new(baseurl)
   case client {
-    Ok(client) -> #(Model(..model, client:), effect.none())
+    Ok(client) -> #(
+      Model(..model, client:),
+      effect.from(fn(_dispatch) { utils2.set_item("fhir_server", baseurl) }),
+    )
     Error(_) -> #(model, effect.none())
   }
 }

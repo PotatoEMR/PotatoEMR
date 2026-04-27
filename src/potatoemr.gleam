@@ -44,8 +44,17 @@ pub fn main() {
 }
 
 fn init(_) -> #(Model, Effect(Msg)) {
-  let assert Ok(client) =
-    r4us_rsvp.fhirclient_new("https://r4.smarthealthit.org/")
+  let stored_url = utils2.get_item("fhir_server")
+  let default_url = "https://r4.smarthealthit.org/"
+  let client = case stored_url {
+    "" -> r4us_rsvp.fhirclient_new(default_url)
+    url ->
+      case r4us_rsvp.fhirclient_new(url) {
+        Ok(c) -> Ok(c)
+        Error(_) -> r4us_rsvp.fhirclient_new(default_url)
+      }
+  }
+  let assert Ok(client) = client
 
   // when user clicks a link in app, send msg to update fn
   let modem_effect =
@@ -324,6 +333,7 @@ fn view(model: Model) -> Element(Msg) {
                               [
                                 h.img([
                                   a.src(photo_src),
+                                  a.alt("Patient Photo"),
                                   a.class("w-20 h-20 rounded-full object-cover"),
                                 ]),
                                 h.div([], [

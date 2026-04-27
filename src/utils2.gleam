@@ -43,6 +43,12 @@ pub fn if_pat_data_update_patient(
   }
 }
 
+@external(javascript, "./potatoemr_ffi.mjs", "get_item")
+pub fn get_item(key: String) -> String
+
+@external(javascript, "./potatoemr_ffi.mjs", "set_item")
+pub fn set_item(key: String, value: String) -> Nil
+
 @external(javascript, "./potatoemr_ffi.mjs", "read_file_from_event")
 pub fn read_file_from_event(
   event: dynamic.Dynamic,
